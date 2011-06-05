@@ -5,7 +5,7 @@
 #include <avr/pgmspace.h>
 
 #include "util.h"
-#include "button_firmware/spi_interface.h"
+#include "coproc-firmware/spi_interface.h"
 
 
 /* No async for the bootloader */
