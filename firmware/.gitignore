@@ -1,0 +1,13 @@
+*.s
+*.o
+*.hex
+*.bin
+*.pyc
+*.pyo
+
+dep
+dep-app
+dep-boot
+obj
+obj-app
+obj-boot
