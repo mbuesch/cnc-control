@@ -38,22 +38,6 @@ enum jog_state {
 	JOG_RUNNING_NEG,		/* Jogging in negative direction */
 };
 
-enum increment_size {
-	INC_0p0001,	/* 0.0001 */
-	INC_0p0005,	/* 0.0005 */
-	INC_0p001,	/* 0.001 */
-	INC_0p005,	/* 0.005 */
-	INC_0p01,	/* 0.01 */
-	INC_0p05,	/* 0.05 */
-	INC_0p1,	/* 0.1 */
-	INC_0p5,	/* 0.5 */
-	INC_1p0,	/* 1.0 */
-	INC_5p0,	/* 5.0 */
-	INC_10p0,	/* 10.0 */
-
-	NR_INCREMENTS,
-};
-
 /* Left */
 enum softkey0_states {
 	SK0_AXISPOS,		/* Axis position is displayed. */
