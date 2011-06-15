@@ -21,6 +21,8 @@
 
 #define ARRAY_SIZE(x)		(sizeof(x) / sizeof((x)[0]))
 
+#define BUILD_BUG_ON(x)		((void)sizeof(char[1 - 2 * !!(x)]))
+
 /* Memory barrier.
  * The CPU doesn't have runtime reordering, so we just
  * need a compiler memory clobber. */

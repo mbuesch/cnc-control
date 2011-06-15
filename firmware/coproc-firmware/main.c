@@ -24,45 +24,38 @@
 #include <stdint.h>
 
 
+typedef uint16_t jiffies_t;
+
+
+#define BUTTON_DEBOUNCE		msec2jiffies(40)
+#define ENC_DEBOUNCE		msec2jiffies(2)
+
+
 /* Hardware state of a button */
 struct button_hwstate {
 	bool state;			/* 1 = pressed, 0 = released */
-	uint8_t changetimer;		/* Timer since last change */
-};
-
-/* Software state of a button */
-struct button_swstate {
-	bool state;			/* 1 = pressed, 0 = released */
-	bool synchronized;		/* Is synchronized with hardware state? */
+	bool synchronized;		/* Is synchronized with software state? */
+	jiffies_t sync_deadline;	/* Deadline for sync */
 };
 
 /* Hardware state of a torque encoder */
 struct encoder_hwstate {
 	uint8_t gray;			/* The graycode state */
 	uint8_t prev_gray;
-	uint8_t changetimer;		/* Timer since last change */
+	bool synchronized;		/* Is synchronized with software state? */
+	jiffies_t sync_deadline;	/* Deadline for sync */
 };
 
 /* Software state of a torque encoder */
 struct encoder_swstate {
 	int8_t state;
-	bool synchronized;		/* Is synchronized with hardware state? */
 };
 
-static struct button_hwstate hwstates[16];
-static struct button_swstate swstates[16];
-static struct encoder_hwstate enc_hwstate;
-static struct encoder_swstate enc_swstate;
+static struct button_hwstate hwstates[14];
+static uint16_t swstates;
+static struct encoder_hwstate enc_hwstates[1];
+static struct encoder_swstate enc_swstates[1];
 
-
-/* We can keep this in SRAM. It's not that big. */
-static const uint8_t bit2mask_lt[] = {
-	0x01, 0x02, 0x04, 0x08, 0x10, 0x20, 0x40, 0x80,
-};
-/* Convert a bit-number to a bit-mask.
- * Only valid for bitnr<=7.
- */
-#define BITMASK(bitnr)	(__builtin_constant_p(bitnr) ? (1 << (bitnr)) : bit2mask_lt[(bitnr)])
 
 /* Convert 2bit graycode to binary */
 static inline uint8_t gray2bin_2bit(uint8_t graycode)
@@ -72,90 +65,92 @@ static inline uint8_t gray2bin_2bit(uint8_t graycode)
 	return graycode;
 }
 
-ISR(TIMER1_COMPA_vect)
+static void jiffies_init(void)
 {
-#define inc_changetimer(statestruct) do {		\
-		if ((statestruct).changetimer < 0xFF)	\
-			(statestruct).changetimer++;	\
-	} while (0)
+#define JPS			31250 /* jiffies per second */
 
-	inc_changetimer(hwstates[0]);
-	inc_changetimer(hwstates[1]);
-	inc_changetimer(hwstates[2]);
-	inc_changetimer(hwstates[3]);
-	inc_changetimer(hwstates[4]);
-	inc_changetimer(hwstates[5]);
-	inc_changetimer(hwstates[6]);
-	inc_changetimer(hwstates[7]);
-	inc_changetimer(hwstates[8]);
-	inc_changetimer(hwstates[9]);
-	inc_changetimer(hwstates[10]);
-	inc_changetimer(hwstates[11]);
-	inc_changetimer(hwstates[12]);
-	inc_changetimer(hwstates[13]);
-	inc_changetimer(hwstates[14]);
-	inc_changetimer(hwstates[15]);
-	inc_changetimer(enc_hwstate);
-}
-
-static void timers_init(void)
-{
-	/* Initialize a 1khz timer (CPU_HZ is 8Mhz). */
+	/* Initialize the timer to 8M/256=31250 */
+	TCNT1 = 0;
+	OCR1A = 0;
+	TIMSK = 0;
 	TCCR1A = 0;
-	TCCR1B = (1 << CS11) | (1 << WGM12);
-	OCR1A = 1000;
-	TIMSK |= (1 << OCIE1A);
+	TCCR1B = (0 << CS10) | (0 << CS11) | (1 << CS12);
 }
 
-static inline void do_button_read(bool state, uint8_t index)
+#define msec2jiffies(ms)	((jiffies_t)((uint32_t)(ms) * JPS / (uint32_t)1000))
+#define usec2jiffies(us)	((jiffies_t)((uint32_t)(us) * JPS / (uint32_t)1000000))
+
+#define time_after(a, b)	((int16_t)(b) - (int16_t)(a) < 0)
+#define time_before(a, b)	time_after(b, a)
+
+static inline jiffies_t jiffies_get(void)
 {
-	if (state != hwstates[index].state) {
-		hwstates[index].state = state;
-		hwstates[index].changetimer = 0; /* is atomic */
-		swstates[index].synchronized = 0;
+	return TCNT1;
+}
+
+static inline void do_button_read(struct button_hwstate *hw,
+				  bool state,
+				  jiffies_t timestamp)
+{
+	if (state != hw->state) {
+		hw->state = state;
+		hw->synchronized = 0;
+		hw->sync_deadline = timestamp + BUTTON_DEBOUNCE;
+	}
+}
+
+static inline void do_encoder_read(struct encoder_hwstate *hw,
+				   bool a, bool b,
+				   jiffies_t timestamp)
+{
+	uint8_t gray = (uint8_t)a | ((uint8_t)b << 1);
+
+	if (gray != hw->gray) {
+		hw->gray = gray;
+		hw->synchronized = 0;
+		hw->sync_deadline = timestamp + ENC_DEBOUNCE;
 	}
 }
 
 /* Read the hardware states of the buttons */
 static void buttons_read(void)
 {
-	uint8_t b, c, d, enc_a, enc_b, gray;
+	uint8_t b, c, d;
+	jiffies_t now;
 
 	b = PINB;
 	c = PINC;
 	d = PIND;
+	now = jiffies_get();
 
 	/* Interpret the buttons */
-	do_button_read(!(b & (1 << 0)), 0);
-	do_button_read(!(b & (1 << 1)), 1);
-	do_button_read(!(c & (1 << 0)), 2);
-	do_button_read(!(c & (1 << 1)), 3);
-	do_button_read(!(c & (1 << 2)), 4);
-	do_button_read(!(c & (1 << 3)), 5);
-	do_button_read(!(c & (1 << 4)), 6);
-	do_button_read(!(c & (1 << 5)), 7);
-	do_button_read(!(d & (1 << 0)), 8);
-	do_button_read(!(d & (1 << 1)), 9);
-	do_button_read(!(d & (1 << 2)), 10);
-	do_button_read(!(d & (1 << 3)), 11);
-	do_button_read(!(d & (1 << 4)), 12);
-	do_button_read(!(d & (1 << 5)), 13);
+	do_button_read(&hwstates[0], !(b & (1 << 0)), now);
+	do_button_read(&hwstates[1], !(b & (1 << 1)), now);
+	do_button_read(&hwstates[2], !(c & (1 << 0)), now);
+	do_button_read(&hwstates[3], !(c & (1 << 1)), now);
+	do_button_read(&hwstates[4], !(c & (1 << 2)), now);
+	do_button_read(&hwstates[5], !(c & (1 << 3)), now);
+	do_button_read(&hwstates[6], !(c & (1 << 4)), now);
+	do_button_read(&hwstates[7], !(c & (1 << 5)), now);
+	do_button_read(&hwstates[8], !(d & (1 << 0)), now);
+	do_button_read(&hwstates[9], !(d & (1 << 1)), now);
+	do_button_read(&hwstates[10], !(d & (1 << 2)), now);
+	do_button_read(&hwstates[11], !(d & (1 << 3)), now);
+	do_button_read(&hwstates[12], !(d & (1 << 4)), now);
+	do_button_read(&hwstates[13], !(d & (1 << 5)), now);
+	BUILD_BUG_ON(ARRAY_SIZE(hwstates) != 14);
+	BUILD_BUG_ON(ARRAY_SIZE(hwstates) > sizeof(swstates) * 8);
 
-	/* Interpret the torque encoder */
-	enc_a = !(d & (1 << 6));
-	enc_b = !(d & (1 << 7));
-	gray = enc_a | (enc_b << 1);
-	if (gray != enc_hwstate.gray) {
-		enc_hwstate.gray = gray;
-		enc_hwstate.changetimer = 0; /* is atomic */
-		enc_swstate.synchronized = 0;
-	}
-
-	mb();
+	/* Interpret the torque encoders */
+	do_encoder_read(&enc_hwstates[0], !(d & (1 << 6)), !(d & (1 << 7)), now);
+	BUILD_BUG_ON(ARRAY_SIZE(enc_hwstates) != 1);
+	BUILD_BUG_ON(ARRAY_SIZE(enc_hwstates) != ARRAY_SIZE(enc_swstates));
 }
 
 static void buttons_init(void)
 {
+	uint8_t i;
+
 	/* Configure inputs and pullups */
 	DDRB &= ~0x03;
 	PORTB |= 0x03;
@@ -167,7 +162,8 @@ static void buttons_init(void)
 	PORTD |= 0xFF;
 
 	buttons_read();
-	enc_hwstate.prev_gray = enc_hwstate.gray;
+	for (i = 0; i < ARRAY_SIZE(enc_hwstates); i++)
+		enc_hwstates[i].prev_gray = enc_hwstates[i].gray;
 }
 
 static void trigger_trans_interrupt(void)
@@ -178,49 +174,81 @@ static void trigger_trans_interrupt(void)
 	SPI_SLAVE_TRANSIRQ_PORT |= (1 << SPI_SLAVE_TRANSIRQ_BIT);
 }
 
-/* Synchronize the software state of the buttons */
-static void buttons_synchronize(void)
+static inline uint8_t do_sync_button(struct button_hwstate *hw,
+				     uint8_t swstate_bit,
+				     jiffies_t now)
 {
-	uint8_t i, now, prev;
-	bool one_state_changed = 0;
+	bool state;
 
-#define BUTTON_DEBOUNCE		40	/* Button debounce, in milliseconds */
-#define ENC_DEBOUNCE		2	/* Encoder debounce, in milliseconds */
-
-	/* Sync buttons */
-	for (i = 0; i < ARRAY_SIZE(swstates); i++) {
-		if (swstates[i].synchronized)
-			continue;
-		mb();
-		if (hwstates[i].changetimer >= BUTTON_DEBOUNCE) { /* atomic read */
+	if (!hw->synchronized) {
+		if (time_after(now, hw->sync_deadline)) {
+			state = hw->state;
 			irq_disable();
-			swstates[i].state = hwstates[i].state;
-			swstates[i].synchronized = 1;
+			if (state)
+				swstates |= (1 << swstate_bit);
+			else
+				swstates &= ~(1 << swstate_bit);
 			irq_enable();
+			hw->synchronized = 1;
 
-			one_state_changed = 1;
+			return 1;
 		}
 	}
 
-	/* Sync encoder */
-	if (!enc_swstate.synchronized) {
-		mb();
-		if (enc_hwstate.changetimer >= ENC_DEBOUNCE) { /* atomic read */
-			now = gray2bin_2bit(enc_hwstate.gray);
-			prev = gray2bin_2bit(enc_hwstate.prev_gray);
-			irq_disable();
-			if (now == ((prev + 1) & 3)) {
-				enc_swstate.state--;
-				one_state_changed = 1;
+	return 0;
+}
+
+static inline uint8_t do_sync_encoder(struct encoder_hwstate *hw,
+				      struct encoder_swstate *sw,
+				      jiffies_t now)
+{
+	uint8_t cur, prev;
+
+	if (!hw->synchronized) {
+		if (time_after(now, hw->sync_deadline)) {
+			cur = gray2bin_2bit(hw->gray);
+			prev = gray2bin_2bit(hw->prev_gray);
+			hw->prev_gray = hw->gray;
+			hw->synchronized = 1;
+			if (cur == ((prev + 1) & 3)) {
+				irq_disable();
+				sw->state--;
+				irq_enable();
+
+				return 1;
 			}
-			if (now == ((prev - 1) & 3)) {
-				enc_swstate.state++;
-				one_state_changed = 1;
+			if (cur == ((prev - 1) & 3)) {
+				irq_disable();
+				sw->state++;
+				irq_enable();
+
+				return 1;
 			}
-			enc_swstate.synchronized = 1;
-			irq_enable();
-			enc_hwstate.prev_gray = enc_hwstate.gray;
 		}
+	}
+
+	return 0;
+}
+
+/* Synchronize the software state of the buttons */
+static void buttons_synchronize(void)
+{
+	uint8_t i, one_state_changed = 0;
+	jiffies_t now;
+
+	now = jiffies_get();
+
+	/* Sync buttons */
+	for (i = 0; i < ARRAY_SIZE(hwstates); i++) {
+		one_state_changed |= do_sync_button(&hwstates[i], i,
+						    now);
+	}
+
+	/* Sync encoders */
+	for (i = 0; i < ARRAY_SIZE(enc_hwstates); i++) {
+		one_state_changed |= do_sync_encoder(&enc_hwstates[i],
+						     &enc_swstates[i],
+						     now);
 	}
 
 	if (one_state_changed)
@@ -247,11 +275,6 @@ ISR(SPI_STC_vect)
 	static uint8_t checksum;
 	static bool enterboot_first_stage_done;
 
-#define swstate_bit(nr)	do {				\
-		if (swstates[nr].state)			\
-			data |= BITMASK((nr) % 8);	\
-	} while (0)
-
 	data = SPDR;
 
 	switch (data) {
@@ -272,32 +295,16 @@ ISR(SPI_STC_vect)
 
 	switch (data) {
 	case SPI_CONTROL_GETLOW:
-		data = 0;
-		swstate_bit(0);
-		swstate_bit(1);
-		swstate_bit(2);
-		swstate_bit(3);
-		swstate_bit(4);
-		swstate_bit(5);
-		swstate_bit(6);
-		swstate_bit(7);
+		data = swstates & 0xFF;
 		checksum ^= data;
 		break;
 	case SPI_CONTROL_GETHIGH:
-		data = 0;
-		swstate_bit(8);
-		swstate_bit(9);
-		swstate_bit(10);
-		swstate_bit(11);
-		swstate_bit(12);
-		swstate_bit(13);
-		swstate_bit(14);
-		swstate_bit(15);
+		data = (swstates >> 8) & 0xFF;
 		checksum ^= data;
 		break;
 	case SPI_CONTROL_GETENC:
-		data = (uint8_t)enc_swstate.state;
-		enc_swstate.state = 0;
+		data = (uint8_t)(enc_swstates[0].state);
+		enc_swstates[0].state = 0;
 		checksum ^= data;
 		break;
 	case SPI_CONTROL_GETSUM:
@@ -337,13 +344,12 @@ _mainfunc int main(void)
 	irq_disable();
 	wdt_enable(WDTO_500MS);
 
-	timers_init();
+	jiffies_init();
 	buttons_init();
 	spi_init();
 
 	irq_enable();
 	while (1) {
-		mb();
 		buttons_read();
 		buttons_synchronize();
 		wdt_reset();
