@@ -28,7 +28,7 @@ typedef uint16_t jiffies_t;
 
 
 #define BUTTON_DEBOUNCE		msec2jiffies(40)
-#define ENC_DEBOUNCE		msec2jiffies(2)
+#define ENC_DEBOUNCE		usec2jiffies(3500)
 
 
 /* Hardware state of a button */

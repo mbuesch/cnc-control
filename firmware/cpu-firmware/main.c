@@ -256,7 +256,7 @@ void spi_async_done(void)
 	/* Update state. */
 	BUG_ON(!irqs_disabled());
 	state.buttons = spi_rx_data.low | ((uint16_t)spi_rx_data.high << 8);
-	state.jogwheel = (int8_t)spi_rx_data.enc;
+	state.jogwheel += (int8_t)spi_rx_data.enc;
 }
 
 /* Spindle state may change at any time before or right after this check */
@@ -266,15 +266,22 @@ static inline bool spindle_is_on(void)
 	return state.spindle_on;
 }
 
-static uint16_t get_buttons(int8_t *jogwheel)
+static uint16_t get_buttons(int8_t *_jogwheel)
 {
 	uint16_t buttons;
+	int8_t jogwheel;
 	uint8_t sreg;
 
 	sreg = irq_disable_save();
+
+	/* Get the pushbuttons state */
 	buttons = state.buttons;
-	*jogwheel = state.jogwheel;
-	state.jogwheel = 0; /* Consume jogwheel counts */
+	/* Get the jogwheel state.
+	 * One "wheel-click" is equivalent to two state increments.
+	 * So we convert the value to "wheel-clicks". */
+	jogwheel = state.jogwheel / 2;
+	state.jogwheel %= 2;
+
 	irq_restore(sreg);
 
 	if (buttons & BTN_TWOHAND) {
@@ -290,10 +297,11 @@ static uint16_t get_buttons(int8_t *jogwheel)
 				     BTN_JOG_NEGATIVE |
 				     BTN_JOG_INC |
 				     BTN_ENCPUSH);
-			*jogwheel = 0;
+			jogwheel = 0;
 		}
 	}
 
+	*_jogwheel = jogwheel;
 	return buttons;
 }
 
