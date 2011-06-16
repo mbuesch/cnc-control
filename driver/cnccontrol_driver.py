@@ -10,6 +10,7 @@
 import sys
 import usb
 import time
+from datetime import datetime, timedelta
 
 
 IDVENDOR	= 0x6666
@@ -409,16 +410,32 @@ class ControlIrqDevflags(ControlIrq):
 	def __repr__(self):
 		return "DEVFLAGS interrupt: %04X" % (self.devFlags)
 
+class JogState:
+	KEEPALIFE_TIMEOUT = 0.3
+
+	def __init__(self):
+		self.reset()
+
+	def get(self):
+		if datetime.now() > self.__timeout:
+			return (FixPt(0.0), False, FixPt(0.0))
+		return (self.__direction,
+			self.__incremental,
+			self.__velocity)
+
+	def set(self, direction, incremental, velocity):
+		self.__direction, self.__incremental, self.__velocity =\
+			direction, incremental, velocity
+		self.keepAlife()
+
+	def reset(self):
+		self.set(FixPt(0.0), False, FixPt(0.0))
+
+	def keepAlife(self):
+		self.__timeout = datetime.now() +\
+			timedelta(seconds=self.KEEPALIFE_TIMEOUT)
+
 class CNCControl:
-	class JogState:
-		def __init__(self):
-			self.reset()
-
-		def reset(self):
-			self.direction = FixPt(0.0)
-			self.incremental = False
-			self.velocity = FixPt(0.0)
-
 	def __init__(self, verbose=False):
 		self.deviceAvailable = False
 		self.verbose = verbose
@@ -509,7 +526,7 @@ class CNCControl:
 		self.jogStates = { }
 		for ax in ALL_AXES:
 			self.axisPositions[ax] = FixPt(0.0)
-			self.jogStates[ax] = self.JogState()
+			self.jogStates[ax] = JogState()
 		self.foState = 0
 		self.spindleCommand = 0
 		self.spindleState = 0
@@ -556,11 +573,12 @@ class CNCControl:
 			if irq.jogFlags & ControlIrqJog.IRQ_JOG_RAPID:
 				velocity = FixPt(-1.0)
 			state = self.jogStates[irq.axis]
-			state.direction = irq.increment
-			state.incremental = not cont
-			state.velocity = velocity
-#		elif irq.id == ControlIrq.IRQ_JOG_KEEPALIFE:
-#			pass#TODO
+			state.set(direction = irq.increment,
+				  incremental = not cont,
+				  velocity = velocity)
+		elif irq.id == ControlIrq.IRQ_JOG_KEEPALIFE:
+			map(lambda ax: self.jogStates[ax].keepAlife(),
+			    self.jogStates)
 		elif irq.id == ControlIrq.IRQ_SPINDLE:
 			irq2direction = {
 				ControlMsgSpindleupdate.SPINDLE_OFF:	0,
@@ -683,9 +701,10 @@ class CNCControl:
 		if not self.deviceAvailable:
 			return (0, False, 0)
 		state = self.jogStates[axis]
-		retval = (state.direction.floatval,
-			  state.incremental,
-			  state.velocity.floatval)
-		if state.incremental:
+		(direction, incremental, velocity) = state.get()
+		retval = (direction.floatval,
+			  incremental,
+			  velocity.floatval)
+		if incremental:
 			state.reset()
 		return retval
