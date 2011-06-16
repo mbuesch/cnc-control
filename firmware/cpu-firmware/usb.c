@@ -135,8 +135,10 @@ static uint8_t usb_set_configuration(uint8_t bConfigurationValue)
 			return 1;
 		}
 		usb_enable_endpoints(1);
+		usb_app_highpower(1);
 	} else {
 		/* Deconfigure the device */
+		usb_app_highpower(0);
 		usb_enable_endpoints(0);
 	}
 	usb_active_configuration = bConfigurationValue;

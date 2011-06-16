@@ -120,6 +120,11 @@ static fixpt_t increment_size_up(fixpt_t inc)
 	return pgm_read(&increments[next]);
 }
 
+void leds_enable(bool enable)
+{
+	sr4094_outen(enable);
+}
+
 static inline void extports_commit(void)
 {
 	sr4094_put_data(&extports, sizeof(extports));

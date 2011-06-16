@@ -109,6 +109,8 @@ static inline jiffies_t get_jiffies_low(void)
 #define EXT_LED_SK1		EXTPORT(1, 4)
 
 
+/* Enable/disable LEDs */
+void leds_enable(bool enable);
 /* Reset the device */
 void reset_device_state(void);
 /* Axis manipulation */

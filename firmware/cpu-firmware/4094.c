@@ -19,17 +19,18 @@
 #include <avr/io.h>
 
 
-#define sr4094_clear(pin)	SR4094_##pin##_PORT &= ~(1 << SR4094_##pin##_BIT)
-#define sr4094_set(pin)		SR4094_##pin##_PORT |= (1 << SR4094_##pin##_BIT)
+#define _sr4094_clear(pin)	SR4094_##pin##_PORT &= ~(1 << SR4094_##pin##_BIT)
+#define _sr4094_set(pin)	SR4094_##pin##_PORT |= (1 << SR4094_##pin##_BIT)
+
 
 static inline void sr4094_transfer_start(void)
 {
-	sr4094_clear(STROBE);
+	_sr4094_clear(STROBE);
 }
 
 static inline void sr4094_transfer_end(void)
 {
-	sr4094_set(STROBE);
+	_sr4094_set(STROBE);
 }
 
 static void sr4094_put_byte(uint8_t data)
@@ -38,13 +39,13 @@ static void sr4094_put_byte(uint8_t data)
 
 	do {
 		if (data & mask)
-			sr4094_set(DATA);
+			_sr4094_set(DATA);
 		else
-			sr4094_clear(DATA);
-		sr4094_set(CLOCK);
+			_sr4094_clear(DATA);
+		_sr4094_set(CLOCK);
 		nop();
 		nop();
-		sr4094_clear(CLOCK);
+		_sr4094_clear(CLOCK);
 		mask >>= 1;
 	} while (mask);
 }
@@ -60,20 +61,27 @@ void sr4094_put_data(void *_data, uint8_t nr_chips)
 	sr4094_transfer_end();
 }
 
+void sr4094_outen(uint8_t enable)
+{
+	if (enable)
+		_sr4094_set(OUTEN);
+	else
+		_sr4094_clear(OUTEN);
+}
+
 void sr4094_init(void *initial_data, uint8_t nr_chips)
 {
-	sr4094_clear(OUTEN);
+	sr4094_outen(0);
 	SR4094_OUTEN_DDR |= (1 << SR4094_OUTEN_BIT);
 
-	sr4094_clear(DATA);
+	_sr4094_clear(DATA);
 	SR4094_DATA_DDR |= (1 << SR4094_DATA_BIT);
 
-	sr4094_clear(CLOCK);
+	_sr4094_clear(CLOCK);
 	SR4094_CLOCK_DDR |= (1 << SR4094_CLOCK_BIT);
 
-	sr4094_set(STROBE);
+	_sr4094_set(STROBE);
 	SR4094_STROBE_DDR |= (1 << SR4094_STROBE_BIT);
 
 	sr4094_put_data(initial_data, nr_chips);
-	sr4094_set(OUTEN);
 }

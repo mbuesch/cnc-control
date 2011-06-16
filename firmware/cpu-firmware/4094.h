@@ -45,4 +45,11 @@ void sr4094_init(void *initial_data, uint8_t nr_chips);
  */
 void sr4094_put_data(void *data, uint8_t nr_chips);
 
+/**
+ * sr4094_outen - Set Output Enable
+ *
+ * @enable: If true, enable output.
+ */
+void sr4094_outen(uint8_t enable);
+
 #endif /* SHREG_4094_H_ */

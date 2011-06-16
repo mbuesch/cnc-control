@@ -69,6 +69,7 @@
 /* Application layer configuration */
 #if USB_MINI
 # define USB_APP_HAVE_RESET		0
+# define USB_APP_HAVE_HIGHPOWER		0
 # define USB_APP_HAVE_CTLSETUPRX	0
 # define USB_APP_HAVE_EP1RX		0
 # define USB_APP_HAVE_EP1TXPOLL		0
@@ -76,6 +77,7 @@
 # define USB_APP_HAVE_EP2TXPOLL		0
 #else
 # define USB_APP_HAVE_RESET		1
+# define USB_APP_HAVE_HIGHPOWER		1
 # define USB_APP_HAVE_CTLSETUPRX	1
 # define USB_APP_HAVE_EP1RX		1
 # define USB_APP_HAVE_EP1TXPOLL		1

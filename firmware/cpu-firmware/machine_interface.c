@@ -67,6 +67,11 @@ void usb_app_reset(void)
 	irq_restore(sreg);
 }
 
+void usb_app_highpower(bool granted)
+{
+	leds_enable(granted);
+}
+
 uint16_t get_active_devflags(void)
 {
 	uint16_t flags;

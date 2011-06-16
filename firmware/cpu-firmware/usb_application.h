@@ -4,7 +4,7 @@
  *   Tiny USB stack
  *   Application level code
  *
- *   Copyright (C) 2009 Michael Buesch <m@bues.ch>
+ *   Copyright (C) 2009-2011 Michael Buesch <m@bues.ch>
  *
  *   This program is free software; you can redistribute it and/or
  *   modify it under the terms of the GNU General Public License
@@ -17,6 +17,7 @@
  */
 
 #include "usb_config.h"
+#include "util.h"
 
 #include <stdint.h>
 
@@ -31,6 +32,16 @@ struct usb_ctrl;
 void usb_app_reset(void);
 #else
 static inline void usb_app_reset(void) { }
+#endif
+
+/** usb_app_highpower - Called when high-power permission changes.
+ * @granted: If true, the device is granted more than 1 power unit (100mA),
+ *	but only up to the bMaxPower specified in the configuration descriptor.
+ */
+#if USB_APP_HAVE_HIGHPOWER
+void usb_app_highpower(bool granted);
+#else
+static inline void usb_app_highpower(bool granted) { }
 #endif
 
 /** usb_app_control_rx - Handle a received EP0 frame in the app layer.
