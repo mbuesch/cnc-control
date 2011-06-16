@@ -20,6 +20,7 @@ SPARSE		= sparse
 ADMIN_TOOL	= ../../driver/admin.py
 
 DEBUG		= 0		# Debug build:  make DEBUG=1
+COMBINE		= 1		# Set to 0 to disable whole program optimization
 
 V		= @		# Verbose build:  make V=1
 C		= 0		# Sparsechecker build:  make C=1
@@ -38,6 +39,7 @@ endif
 CFLAGS		= -mmcu=$(ARCH) -std=gnu99 -g0 -O2 -Wall -DDEBUG=$(DEBUG) \
 		  "-Dinline=inline __attribute__((__always_inline__))" \
 		  -D__EMBEDDED__ -I..
+COMBINE_CFLAGS	= -fwhole-program --combine
 SPARSEFLAGS	= $(CFLAGS) -I "/usr/lib/avr/include" -D__AVR_ARCH__=5 \
 		  -D__AVR_ATmega32__=1 -D__ATTR_PROGMEM__="" -Dsignal=dllexport \
 		  -Dexternally_visible=dllexport
@@ -118,13 +120,25 @@ descriptor_table_mini.h: descriptor_table_mini.py descriptor_generator.py
 %.s: %.c
 	$(QUIET_CC) $(CFLAGS) -S $*.c
 
+ifeq ($(strip $(COMBINE)),0)
 $(APP_BIN): $(call OBJS,$(APP_SRCS),app)
 	$(QUIET_CC) $(CFLAGS) $(APP_CFLAGS) -o $(APP_BIN) \
 		$(call OBJS,$(APP_SRCS),app) $(LDFLAGS) $(APP_LDFLAGS)
+else
+$(APP_BIN): $(APP_SRCS)
+	$(QUIET_CC) $(CFLAGS) $(APP_CFLAGS) $(COMBINE_CFLAGS) -o $(APP_BIN) \
+		$(APP_SRCS) $(LDFLAGS) $(APP_LDFLAGS)
+endif
 
+ifeq ($(strip $(COMBINE)),0)
 $(BOOT_BIN): $(call OBJS,$(BOOT_SRCS),boot)
 	$(QUIET_CC) $(CFLAGS) $(BOOT_CFLAGS) -o $(BOOT_BIN) \
 		$(call OBJS,$(BOOT_SRCS),boot) $(LDFLAGS) $(BOOT_LDFLAGS)
+else
+$(BOOT_BIN): $(BOOT_SRCS)
+	$(QUIET_CC) $(CFLAGS) $(BOOT_CFLAGS) $(COMBINE_CFLAGS) -o $(BOOT_BIN) \
+		$(BOOT_SRCS) $(LDFLAGS) $(BOOT_LDFLAGS)
+endif
 
 $(APP_HEX): $(APP_BIN)
 	$(QUIET_OBJCOPY) -R.eeprom -O ihex $(APP_BIN) $(APP_HEX)
