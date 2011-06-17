@@ -101,6 +101,7 @@ class ControlMsg:
 	CONTROL_DEVFLAGS		= 2
 	CONTROL_AXISUPDATE		= 3
 	CONTROL_SPINDLEUPDATE		= 4
+	CONTROL_FOUPDATE		= 5
 	CONTROL_ENTERBOOT		= 0xA0
 	CONTROL_EXITBOOT		= 0xA1
 	CONTROL_BOOT_WRITEBUF		= 0xA2
@@ -169,6 +170,16 @@ class ControlMsgSpindleupdate(ControlMsg):
 	def getRaw(self):
 		raw = ControlMsg.getRaw(self)
 		raw.append(self.state & 0xFF)
+		return raw
+
+class ControlMsgFoupdate(ControlMsg):
+	def __init__(self, percent, hdrFlags=0):
+		ControlMsg.__init__(self, ControlMsg.CONTROL_FOUPDATE, hdrFlags)
+		self.percent = percent
+
+	def getRaw(self):
+		raw = ControlMsg.getRaw(self)
+		raw.append(self.percent & 0xFF)
 		return raw
 
 class ControlMsgEnterboot(ControlMsg):
@@ -530,6 +541,7 @@ class CNCControl:
 		self.foState = 0
 		self.spindleCommand = 0
 		self.spindleState = 0
+		self.feedOverridePercent = 0
 
 	@staticmethod
 	def __findDevice(idVendor, idProduct):
@@ -682,6 +694,18 @@ class CNCControl:
 		outRange = maxValue - minValue
 		mult = outRange / inRange
 		return self.foState * mult + minValue
+
+	def setFeedOverrideState(self, percent):
+		# Sends the current FO percentage state to the device
+		if not self.deviceAvailable:
+			return
+		if self.feedOverridePercent == percent:
+			return # No change
+		msg = ControlMsgFoupdate(int(round(percent)))
+		reply = self.controlMsgSyncReply(msg)
+		if not reply.isOK():
+			raise CNCCException("Failed to send feed override state")
+		self.feedOverridePercent = percent
 
 	def setAxisPosition(self, axis, position):
 		# Update axis position on device

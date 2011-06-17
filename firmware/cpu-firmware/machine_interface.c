@@ -186,6 +186,13 @@ static int8_t rx_raw_message(const void *msg, uint8_t ctl_size,
 		spindle_state_update(ctl->spindleupdate.state == SPINDLE_CW);
 		break;
 	}
+	case CONTROL_FOUPDATE: {
+		if (ctl_size < CONTROL_MSG_SIZE(feedoverride))
+			goto err_size;
+
+		feed_override_feedback_update(ctl->feedoverride.percent);
+		break;
+	}
 	case CONTROL_ENTERBOOT: {
 		if (ctl_size < CONTROL_MSG_SIZE(enterboot))
 			goto err_size;

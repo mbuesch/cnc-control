@@ -64,6 +64,7 @@ struct device_state {
 	uint8_t jog;			/* enum jog_state */
 	fixpt_t jog_velocity;		/* Jogging velocity */
 	jiffies_t next_jog_keepalife;	/* Deadline of next jog keepalife */
+	uint8_t fo_feedback_percent;	/* Feed override feedback percentage */
 
 	/* The current axis positions.
 	 * Updated in IRQ context! */
@@ -330,8 +331,8 @@ static void do_update_lcd(void)
 		break;
 	}
 	case SK0_VELOCITY: {
-		lcd_printf("Vf" FIXPT_FMT1,
-			   FIXPT_ARG1(state.jog_velocity));
+		lcd_printf("Vf" FIXPT_FMT0,
+			   FIXPT_ARG0(state.jog_velocity));
 		break;
 	}
 	default:
@@ -344,7 +345,8 @@ static void do_update_lcd(void)
 		lcd_printf("i" FIXPT_FMT3, FIXPT_ARG3(state.selected_increment));
 		break;
 	case SK1_DEVSTATE:
-		lcd_cursor(0, 13);
+		lcd_cursor(0, 9);
+		lcd_printf("%3d%%", state.fo_feedback_percent);
 		lcd_put_char(state.rapid ? 'R' : '-');
 		lcd_put_char(state.jog != JOG_STOPPED ? 'J' : '-');
 		lcd_put_char(spindle_is_on() ? 'S' : '-');
@@ -803,6 +805,14 @@ void axis_pos_update(uint8_t axis, fixpt_t absolute_pos)
 void spindle_state_update(bool on)
 {
 	state.spindle_on = on;
+	mb();
+	update_userinterface();
+}
+
+/* Called in IRQ context! */
+void feed_override_feedback_update(uint8_t percent)
+{
+	state.fo_feedback_percent = min(percent, 200);
 	mb();
 	update_userinterface();
 }

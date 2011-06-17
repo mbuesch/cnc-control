@@ -120,6 +120,7 @@ enum control_id {
 	CONTROL_DEVFLAGS,		/* Update and read device flags */
 	CONTROL_AXISUPDATE,		/* Axis position update */
 	CONTROL_SPINDLEUPDATE,		/* Spindle state update */
+	CONTROL_FOUPDATE,		/* Feed override update */
 
 	/* Bootloader messages */
 	CONTROL_ENTERBOOT = 0xA0,	/* Enter the CPU/coprocessor bootloader */
@@ -177,6 +178,9 @@ struct control_message {
 		struct {
 			uint8_t state;
 		} __packed spindleupdate;
+		struct {
+			uint8_t percent;
+		} __packed feedoverride;
 
 		/* Bootloader messages */
 		struct {

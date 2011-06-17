@@ -122,6 +122,7 @@ def updatePins(ctx):
 	foValue = ctx.cncc.getFeedOverrideState(ctx.h["feed-override.min-value"],
 						ctx.h["feed-override.max-value"])
 	ctx.foBalance.balance(foValue)
+	ctx.cncc.setFeedOverrideState(ctx.h["feed-override.value"] * 100)
 
 	# Update jog states
 	velocity = 0.0
