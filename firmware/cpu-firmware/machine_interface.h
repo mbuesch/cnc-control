@@ -275,10 +275,13 @@ enum interrupt_id {
 	IRQ_SPINDLE,		/* Turn the master spindle on/off */
 	IRQ_FEEDOVERRIDE,	/* Change the feed override */
 	IRQ_DEVFLAGS,		/* Device flags changed. */
+	IRQ_HALT,		/* Halt motion */
 };
 
 enum control_irq_flags {
 	IRQ_FLG_TXQOVR		= (1 << 0), /* TX queue overflow */
+	IRQ_FLG_PRIO		= (1 << 1), /* Higher priority */
+	IRQ_FLG_DROPPABLE	= (1 << 2), /* May be dropped in favor of higher prio irqs */
 };
 
 enum jogirq_flags {
@@ -311,6 +314,8 @@ struct control_interrupt {
 		struct {
 			uint16_t flags;
 		} __packed devflags;
+		struct {
+		} __packed halt;
 	} __packed;
 } __packed;
 

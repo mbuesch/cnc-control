@@ -280,7 +280,7 @@ uint8_t usb_app_ep1_tx_poll(void *buffer)
 		tlist_move_tail(&e->list, &tx_free);
 
 	if (!tlist_is_empty(&tx_queued)) {
-		e = tlist_last_entry(&tx_queued, struct tx_queue_entry, list);
+		e = tlist_first_entry(&tx_queued, struct tx_queue_entry, list);
 		tlist_move_tail(&e->list, &tx_inflight);
 
 		BUILD_BUG_ON(sizeof(e->buffer) > USBCFG_EP1_MAXSIZE);
@@ -337,27 +337,57 @@ static void interface_discard_irqs_by_id(uint8_t irq_id)
 	irq_restore(sreg);
 }
 
+static bool interface_drop_one_droppable_irq(void)
+{
+	struct tx_queue_entry *e;
+	uint8_t sreg;
+	bool dropped = 0;
+
+	sreg = irq_disable_save();
+	tlist_for_each(e, &tx_queued, list) { /* not delsafe */
+		if (e->buffer.flags & IRQ_FLG_DROPPABLE) {
+			/* Dequeue and discard it. */
+			tlist_move_tail(&e->list, &tx_free);
+			dropped = 1;
+			break;
+		}
+	}
+	irq_restore(sreg);
+
+	return dropped;
+}
+
 void send_interrupt(struct control_interrupt *irq, uint8_t size)
 {
-	bool ok;
+	bool ok, dropped;
 	uint8_t i;
 
-	for (i = 0; i < 10; i++) {
-		if (unlikely(irq_queue_overflow))
-			irq->flags |= IRQ_FLG_TXQOVR;
+	while (1) {
+		for (i = 0; i < 10; i++) {
+			if (unlikely(irq_queue_overflow))
+				irq->flags |= IRQ_FLG_TXQOVR;
 
-		ok = interface_queue_interrupt(irq, size);
-		if (likely(ok)) {
-			irq_queue_overflow = 0;
-			return;
+			ok = interface_queue_interrupt(irq, size);
+			if (likely(ok)) {
+				irq_queue_overflow = 0;
+				return;
+			}
+			irq_queue_overflow = 1;
+
+			if (irqs_disabled())
+				break; /* Out of luck. */
+			mdelay(5);
 		}
-		irq_queue_overflow = 1;
+		debug_printf("Control IRQ queue overflow\n");
 
-		if (irqs_disabled())
-			break; /* Out of luck. */
-		mdelay(5);
+		/* Try to drop IRQs, if this is a higher priority IRQ. */
+		if (!(irq->flags & IRQ_FLG_PRIO))
+			break;
+		dropped = interface_drop_one_droppable_irq();
+		if (!dropped)
+			break;
+		debug_printf("Dropped one droppable IRQ\n");
 	}
-	debug_printf("Control IRQ queue overflow\n");
 }
 
 void send_interrupt_discard_old(struct control_interrupt *irq,

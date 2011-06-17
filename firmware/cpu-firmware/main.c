@@ -501,6 +501,7 @@ static void jog_incremental(int8_t inc_count)
 {
 	struct control_interrupt irq = {
 		.id		= IRQ_JOG,
+		.flags		= IRQ_FLG_DROPPABLE,
 	};
 
 	if (!inc_count)
@@ -524,6 +525,7 @@ static void jog_stop(void)
 {
 	struct control_interrupt irq = {
 		.id		= IRQ_JOG,
+		.flags		= IRQ_FLG_PRIO,
 	};
 
 	if (state.jog == JOG_STOPPED)
@@ -550,6 +552,7 @@ static void jog(int8_t direction)
 			jog_incremental(direction > 0 ? 1 : -1);
 		} else {
 			/* Positive or negative jog */
+			irq.flags |= IRQ_FLG_DROPPABLE;
 			irq.jog.axis = state.axis;
 			irq.jog.flags = IRQ_JOG_CONTINUOUS;
 			if (state.rapid)
@@ -587,6 +590,7 @@ static void handle_jog_keepalife(void)
 {
 	struct control_interrupt irq = {
 		.id		= IRQ_JOG_KEEPALIFE,
+		.flags		= IRQ_FLG_DROPPABLE,
 	};
 
 	if (state.jog == JOG_STOPPED)
@@ -642,6 +646,7 @@ static void turn_spindle_on(void)
 {
 	struct control_interrupt irq = {
 		.id		= IRQ_SPINDLE,
+		.flags		= IRQ_FLG_DROPPABLE,
 	};
 
 	irq.spindle.state = SPINDLE_CW;
@@ -652,6 +657,7 @@ static void turn_spindle_off(void)
 {
 	struct control_interrupt irq = {
 		.id		= IRQ_SPINDLE,
+		.flags		= IRQ_FLG_PRIO,
 	};
 
 	irq.spindle.state = SPINDLE_OFF;
@@ -778,6 +784,7 @@ static void interpret_feed_override(bool force)
 {
 	struct control_interrupt irq = {
 		.id		= IRQ_FEEDOVERRIDE,
+		.flags		= IRQ_FLG_DROPPABLE,
 	};
 	uint8_t fostate;
 	static uint8_t prev_state;

@@ -52,7 +52,7 @@ static inline void tlist_move_tail(struct tiny_list *e, struct tiny_list *list)
 
 #define tlist_for_each(p, list, member)					\
 	for (p = tlist_entry((list)->next, typeof(*p), member);		\
-	     &p->member != (head);					\
+	     &p->member != (list);					\
 	     p = tlist_entry(p->member.next, typeof(*p), member))
 
 #define tlist_for_each_delsafe(p, tmp, list, member)			\
