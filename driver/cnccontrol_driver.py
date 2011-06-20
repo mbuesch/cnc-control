@@ -361,17 +361,18 @@ class ControlIrq:
 			id = raw[0]
 			flags = raw[1]
 			if id == ControlIrq.IRQ_JOG:
-				return ControlIrqJog(raw[2:6], raw[6:10], raw[10], raw[11])
+				return ControlIrqJog(raw[2:6], raw[6:10], raw[10], raw[11],
+						     hdrFlags=flags)
 			elif id == ControlIrq.IRQ_JOG_KEEPALIFE:
-				return ControlIrqJogKeepalife()
+				return ControlIrqJogKeepalife(hdrFlags=flags)
 			elif id == ControlIrq.IRQ_SPINDLE:
-				return ControlIrqSpindle(raw[2])
+				return ControlIrqSpindle(raw[2], hdrFlags=flags)
 			elif id == ControlIrq.IRQ_FEEDOVERRIDE:
-				return ControlIrqFeedoverride(raw[2])
+				return ControlIrqFeedoverride(raw[2], hdrFlags=flags)
 			elif id == ControlIrq.IRQ_DEVFLAGS:
-				return ControlIrqDevflags(raw[2:4])
+				return ControlIrqDevflags(raw[2:4], hdrFlags=flags)
 			elif id == ControlIrq.IRQ_HALT:
-				return ControlIrqHalt()
+				return ControlIrqHalt(hdrFlags=flags)
 			else:
 				raise CNCCException("Unknown ControlIrq ID: %d" % id)
 		except (IndexError, KeyError):
