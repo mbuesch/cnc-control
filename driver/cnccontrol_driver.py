@@ -368,7 +368,7 @@ class ControlIrq:
 			elif id == ControlIrq.IRQ_DEVFLAGS:
 				return ControlIrqDevflags(raw[2:4])
 			else:
-				CNCCException("Unknown ControlIrq ID: %d" % id)
+				raise CNCCException("Unknown ControlIrq ID: %d" % id)
 		except (IndexError, KeyError):
 			raise CNCCException("Failed to parse ControlIrq (%d bytes)" % len(raw))
 

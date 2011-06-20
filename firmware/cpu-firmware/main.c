@@ -59,7 +59,8 @@ struct device_state {
 	bool rapid;			/* Rapid-jog on */
 	bool incremental;		/* Incremental-jog on */
 	fixpt_t selected_increment;	/* Selected increment for jog */
-	uint8_t axis;			/* enum axis_id */
+	uint8_t axis;			/* Selected axis (enum axis_id) (Modified in IRQ context) */
+	uint8_t axis_enable_mask;	/* Enabled axes (Modified in IRQ context) */
 
 	uint8_t jog;			/* enum jog_state */
 	fixpt_t jog_velocity;		/* Jogging velocity */
@@ -102,6 +103,48 @@ static fixpt_t PROGMEM increments[] = {
 	FLOAT_TO_FIXPT(0.1),
 };
 
+
+static void select_next_axis(void)
+{
+	uint8_t sreg, axis;
+
+	sreg = irq_disable_save();
+
+	BUG_ON(state.axis_enable_mask == 0);
+	axis = state.axis;
+	while (1) {
+		if (++axis >= NR_AXIS)
+			axis = 0;
+		if (BIT(axis) & state.axis_enable_mask)
+			break;
+	}
+	state.axis = axis;
+
+	update_userinterface();
+	irq_restore(sreg);
+}
+
+static void select_previous_axis(void)
+{
+	uint8_t sreg, axis;
+
+	sreg = irq_disable_save();
+
+	BUG_ON(state.axis_enable_mask == 0);
+	axis = state.axis;
+	while (1) {
+		if (axis == 0)
+			axis = NR_AXIS - 1;
+		else
+			axis--;
+		if (BIT(axis) & state.axis_enable_mask)
+			break;
+	}
+	state.axis = axis;
+
+	update_userinterface();
+	irq_restore(sreg);
+}
 
 /* Returns the next bigger increment size */
 static fixpt_t increment_size_up(fixpt_t inc)
@@ -407,27 +450,6 @@ static void update_leds(void)
 	uint16_t devflags = get_active_devflags();
 	extports_t ext = extports;
 
-	_extports_clear(ext, EXT_LED_XAXIS);
-	_extports_clear(ext, EXT_LED_YAXIS);
-	_extports_clear(ext, EXT_LED_ZAXIS);
-	_extports_clear(ext, EXT_LED_AAXIS);
-	switch (state.axis) {
-	case AXIS_X:
-		_extports_set(ext, EXT_LED_XAXIS);
-		break;
-	case AXIS_Y:
-		_extports_set(ext, EXT_LED_YAXIS);
-		break;
-	case AXIS_Z:
-		_extports_set(ext, EXT_LED_ZAXIS);
-		break;
-	case AXIS_A:
-		_extports_set(ext, EXT_LED_AAXIS);
-		break;
-	default:
-		BUG_ON(1);
-	}
-
 	if (spindle_is_on())
 		_extports_set(ext, EXT_LED_SPINDLE);
 	else
@@ -603,6 +625,16 @@ static void handle_jog_keepalife(void)
 	set_jog_keepalife_deadline();
 }
 
+static void halt_motion(void)
+{
+	struct control_interrupt irq = {
+		.id		= IRQ_HALT,
+		.flags		= IRQ_FLG_PRIO,
+	};
+
+	send_interrupt(&irq, CONTROL_IRQ_SIZE(halt));
+}
+
 static void interpret_jogwheel(int8_t jogwheel, bool wheel_pressed)
 {
 	fixpt_t mult, increment, velocity;
@@ -664,6 +696,14 @@ static void turn_spindle_off(void)
 	send_interrupt(&irq, CONTROL_IRQ_SIZE(spindle));
 }
 
+static void update_button_led(bool btn_pressed, extports_t ledport)
+{
+	if (btn_pressed)
+		extports_set(ledport);
+	else
+		extports_clear(ledport);
+}
+
 static void interpret_buttons(void)
 {
 	uint16_t buttons;
@@ -671,13 +711,15 @@ static void interpret_buttons(void)
 
 	static uint16_t prev_buttons;
 
-#define pressed(btn)	((buttons & (btn)) && !(prev_buttons & (btn)))
-#define released(btn)	(!(buttons & (btn)) && (prev_buttons & (btn)))
+#define rising_edge(btn)	((buttons & (btn)) && !(prev_buttons & (btn)))
+#define falling_edge(btn)	(!(buttons & (btn)) && (prev_buttons & (btn)))
+#define pressed(btn)		(buttons & (btn))
+#define released(btn)		(!pressed(btn))
 
 	buttons = get_buttons(&jogwheel);
 
 	/* on/off button */
-	if (pressed(BTN_ONOFF)) {
+	if (rising_edge(BTN_ONOFF)) {
 		uint16_t flags;
 
 		flags = get_active_devflags();
@@ -689,7 +731,7 @@ static void interpret_buttons(void)
 	}
 
 	/* Spindle button */
-	if (pressed(BTN_SPINDLE)) {
+	if (rising_edge(BTN_SPINDLE)) {
 		if (spindle_is_on()) {
 			turn_spindle_off();
 		} else {
@@ -697,71 +739,68 @@ static void interpret_buttons(void)
 			state.spindle_change_time = get_jiffies() + msec2jiffies(800);
 		}
 	}
-	if (released(BTN_SPINDLE))
+	if (falling_edge(BTN_SPINDLE))
 		state.spindle_delayed_on = 0;
 
-	/* X-axis selection */
-	if (pressed(BTN_AXIS_X)) {
+	update_button_led(pressed(BTN_HALT), EXT_LED_HALT);
+	if (rising_edge(BTN_HALT))
+		halt_motion();
+
+	/* Next axis selection */
+	update_button_led(pressed(BTN_AXIS_NEXT), EXT_LED_AXIS_NEXT);
+	update_button_led(pressed(BTN_AXIS_PREV), EXT_LED_AXIS_PREV);
+	if (rising_edge(BTN_AXIS_NEXT)) {
 		jog(0);
-		state.axis = AXIS_X;
-		update_userinterface();
+		select_next_axis();
 	}
-	/* Y-axis selection */
-	if (pressed(BTN_AXIS_Y)) {
+
+	/* Previous axis selection */
+	if (rising_edge(BTN_AXIS_PREV)) {
 		jog(0);
-		state.axis = AXIS_Y;
-		update_userinterface();
-	}
-	/* Z-axis selection */
-	if (pressed(BTN_AXIS_Z)) {
-		jog(0);
-		state.axis = AXIS_Z;
-		update_userinterface();
-	}
-	/* A-axis selection */
-	if (pressed(BTN_AXIS_A)) {
-		jog(0);
-		state.axis = AXIS_A;
-		update_userinterface();
+		select_previous_axis();
 	}
 
 	/* Rapid-move button */
-	if (pressed(BTN_JOG_RAPID)) {
+	if (rising_edge(BTN_JOG_RAPID)) {
 		state.rapid = 1;
 		jog_update();
 		update_userinterface();
 	}
-	if (released(BTN_JOG_RAPID)) {
+	if (falling_edge(BTN_JOG_RAPID)) {
 		state.rapid = 0;
 		jog_update();
 		update_userinterface();
 	}
 
 	/* Incremental-button */
-	if (pressed(BTN_JOG_INC)) {
+	if (rising_edge(BTN_JOG_INC)) {
 		jog(0);
 		state.incremental = !state.incremental;
 		update_userinterface();
 	}
 
 	/* Softkeys */
-	interpret_softkeys(pressed(BTN_SOFT0),
-			   pressed(BTN_SOFT1));
+	update_button_led(pressed(BTN_SOFT0), EXT_LED_SK0);
+	update_button_led(pressed(BTN_SOFT1), EXT_LED_SK1);
+	interpret_softkeys(rising_edge(BTN_SOFT0),
+			   rising_edge(BTN_SOFT1));
 
 	/* Jog */
-	if (pressed(BTN_JOG_POSITIVE))
+	if (rising_edge(BTN_JOG_POSITIVE))
 		jog(1);
-	if (pressed(BTN_JOG_NEGATIVE))
+	if (rising_edge(BTN_JOG_NEGATIVE))
 		jog(-1);
-	if (released(BTN_JOG_NEGATIVE) ||
-	    released(BTN_JOG_POSITIVE))
+	if (falling_edge(BTN_JOG_NEGATIVE) ||
+	    falling_edge(BTN_JOG_POSITIVE))
 		jog(0);
 
 	/* Jogwheel. Only if not jogging via buttons. */
 	if (state.jog == JOG_STOPPED)
-		interpret_jogwheel(jogwheel, pressed(BTN_ENCPUSH));
+		interpret_jogwheel(jogwheel, rising_edge(BTN_ENCPUSH));
 
 	prev_buttons = buttons;
+#undef rising_edge
+#undef falling_edge
 #undef pressed
 #undef released
 }
@@ -796,6 +835,18 @@ static void interpret_feed_override(bool force)
 
 	irq.feedoverride.state = fostate;
 	send_interrupt_discard_old(&irq, CONTROL_IRQ_SIZE(feedoverride));
+}
+
+/* Called in IRQ context! */
+void set_axis_enable_mask(uint8_t mask)
+{
+	BUG_ON(mask == 0);
+
+	state.axis_enable_mask = mask;
+	if (!(BIT(state.axis) & mask))
+		state.axis = ffs8(mask) - 1;
+	mb();
+	update_userinterface();
 }
 
 /* Called in IRQ context! */
@@ -860,6 +911,8 @@ void reset_device_state(void)
 	state.softkey[0] = SK0_AXISPOS;
 	state.softkey[1] = SK1_INCREMENT;
 
+	set_axis_enable_mask(BIT(AXIS_X) | BIT(AXIS_Y) | BIT(AXIS_Z) |
+			     BIT(AXIS_A));
 	reset_devflags();
 
 	update_userinterface();

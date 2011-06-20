@@ -100,4 +100,16 @@ void reboot(void)
 	while (1);
 }
 
+uint8_t ffs8(uint8_t value)
+{
+	uint8_t mask, count;
+
+	for (mask = 0x01, count = 1; mask; mask <<= 1, count++) {
+		if (value & mask)
+			return count;
+	}
+
+	return 0;
+}
+
 #endif /* !IN_BOOT */

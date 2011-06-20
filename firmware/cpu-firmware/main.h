@@ -75,12 +75,12 @@ static inline jiffies_t get_jiffies_low(void)
 
 
 /* Pushbuttons */
-#define BTN_AXIS_A		(1ul << 0)	/* Axis select A */
-#define BTN_AXIS_Z		(1ul << 1)	/* Axis select Z */
-#define BTN_AXIS_Y		(1ul << 2)	/* Axis select Y */
-#define BTN_AXIS_X		(1ul << 3)	/* Axis select X */
-#define BTN_SPINDLE		(1ul << 4)	/* Twohand security switch */
-#define BTN_TWOHAND		(1ul << 5)	/* Spindle enable/disable */
+#define BTN_HALT		(1ul << 0)	/* Motion halt */
+#define BTN_SPINDLE		(1ul << 1)	/* Spindle on/off */
+#define BTN_AXIS_NEXT		(1ul << 2)	/* Select next axis */
+#define BTN_AXIS_PREV		(1ul << 3)	/* Select previous axis */
+#define BTN_RESERVED		(1ul << 4)
+#define BTN_TWOHAND		(1ul << 5)	/* Twohand security switch */
 #define BTN_JOG_POSITIVE	(1ul << 6)	/* JOG + */
 #define BTN_JOG_RAPID		(1ul << 7)	/* Rapid JOG */
 #define BTN_JOG_NEGATIVE	(1ul << 8)	/* JOG - */
@@ -94,11 +94,11 @@ static inline jiffies_t get_jiffies_low(void)
 /* External output-port interface */
 #define EXTPORT(chipnr, portnr)	((1ul << (portnr)) << ((chipnr) * 8))
 
-#define EXT_LED_AAXIS		EXTPORT(0, 0)
-#define EXT_LED_ZAXIS		EXTPORT(0, 1)
-#define EXT_LED_YAXIS		EXTPORT(0, 2)
-#define EXT_LED_XAXIS		EXTPORT(0, 3)
-#define EXT_LED_SPINDLE		EXTPORT(0, 4)
+#define EXT_LED_HALT		EXTPORT(0, 0)
+#define EXT_LED_SPINDLE		EXTPORT(0, 1)
+#define EXT_LED_AXIS_NEXT	EXTPORT(0, 2)
+#define EXT_LED_AXIS_PREV	EXTPORT(0, 3)
+#define EXT_LED_RESERVED	EXTPORT(0, 4)
 #define EXT_LED_TWOHAND		EXTPORT(0, 5)
 #define EXT_LED_JOGPOS		EXTPORT(0, 6)
 #define EXT_LED_JOGRAPID	EXTPORT(0, 7)
@@ -113,6 +113,8 @@ static inline jiffies_t get_jiffies_low(void)
 void leds_enable(bool enable);
 /* Reset the device */
 void reset_device_state(void);
+/* Axis mask */
+void set_axis_enable_mask(uint8_t mask);
 /* Axis manipulation */
 void axis_pos_update(uint8_t axis, fixpt_t absolute_pos);
 /* Spindle state */

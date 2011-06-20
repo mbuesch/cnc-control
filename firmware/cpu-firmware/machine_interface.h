@@ -121,6 +121,7 @@ enum control_id {
 	CONTROL_AXISUPDATE,		/* Axis position update */
 	CONTROL_SPINDLEUPDATE,		/* Spindle state update */
 	CONTROL_FOUPDATE,		/* Feed override update */
+	CONTROL_AXISENABLE,		/* Set the axis-enable mask */
 
 	/* Bootloader messages */
 	CONTROL_ENTERBOOT = 0xA0,	/* Enter the CPU/coprocessor bootloader */
@@ -181,6 +182,9 @@ struct control_message {
 		struct {
 			uint8_t percent;
 		} __packed feedoverride;
+		struct {
+			uint8_t mask;
+		} __packed axisenable;
 
 		/* Bootloader messages */
 		struct {

@@ -193,6 +193,15 @@ static int8_t rx_raw_message(const void *msg, uint8_t ctl_size,
 		feed_override_feedback_update(ctl->feedoverride.percent);
 		break;
 	}
+	case CONTROL_AXISENABLE: {
+		if (ctl_size < CONTROL_MSG_SIZE(axisenable))
+			goto err_size;
+
+		if (!ctl->axisenable.mask)
+			goto err_inval;
+		set_axis_enable_mask(ctl->axisenable.mask);
+		break;
+	}
 	case CONTROL_ENTERBOOT: {
 		if (ctl_size < CONTROL_MSG_SIZE(enterboot))
 			goto err_size;

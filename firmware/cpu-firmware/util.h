@@ -33,6 +33,8 @@
 
 #define ARRAY_SIZE(x)		(sizeof(x) / sizeof((x)[0]))
 
+#define BIT(nr)			(1ull << (nr))
+
 /* Memory barrier.
  * The CPU doesn't have runtime reordering, so we just
  * need a compiler memory clobber. */
@@ -130,5 +132,9 @@ uint8_t hexdigit_to_ascii(uint8_t digit);
 	})
 extern void _pgm_read_invalid_type_size(void);
 
+
+/* Find first set bit.
+ * Returns 0, if no bit is set. */
+uint8_t ffs8(uint8_t value);
 
 #endif /* MY_UTIL_H_ */
