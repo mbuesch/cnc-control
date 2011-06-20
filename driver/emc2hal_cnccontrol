@@ -34,6 +34,8 @@ class Context:
 			self.incJogPlus[ax] = BitPoke(h, "jog.%s.inc-plus" % ax)
 			self.incJogMinus[ax] = BitPoke(h, "jog.%s.inc-minus" % ax)
 
+		self.programStop = BitPoke(h, "program.stop", cycleMsec=100)
+
 class BitPoke:
 	def __init__(self, h, pin, cycleMsec=1):
 		self.h = h
@@ -93,6 +95,11 @@ def updatePins(ctx):
 		return
 	if not ctx.cncc.deviceIsTurnedOn():
 		return
+
+	# Halt the program, if requested
+	if ctx.cncc.haveMotionHaltRequest():
+		ctx.programStop.startDuty()
+	ctx.programStop.update()
 
 	# Update master spindle state
 	direction = ctx.cncc.getSpindleCommand()
@@ -175,6 +182,7 @@ def createPins(h):
 
 	# Machine state
 	h.newpin("machine.is-on", HAL_BIT, HAL_IN)
+	h.newpin("machine.estop-active", HAL_BIT, HAL_IN)#TODO
 
 	# Axis
 	for ax in ALL_AXES:
@@ -206,6 +214,9 @@ def createPins(h):
 	h.newpin("feed-override.value", HAL_FLOAT, HAL_IN)
 	h.newparam("feed-override.min-value", HAL_FLOAT, HAL_RW)
 	h.newparam("feed-override.max-value", HAL_FLOAT, HAL_RW)
+
+	# Program control
+	h.newpin("program.stop", HAL_BIT, HAL_OUT)
 
 def eventloop(h, cncc):
 	ctx = Context(h, cncc)

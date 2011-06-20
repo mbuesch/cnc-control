@@ -344,9 +344,12 @@ class ControlIrq:
 	IRQ_SPINDLE		= 2
 	IRQ_FEEDOVERRIDE	= 3
 	IRQ_DEVFLAGS		= 4
+	IRQ_HALT		= 5
 
 	# Flags
 	IRQ_FLG_TXQOVR		= (1 << 0)
+	IRQ_FLG_PRIO		= (1 << 1)
+	IRQ_FLG_DROPPABLE	= (1 << 2)
 
 	def __init__(self, id, flags):
 		self.id = id
@@ -367,6 +370,8 @@ class ControlIrq:
 				return ControlIrqFeedoverride(raw[2])
 			elif id == ControlIrq.IRQ_DEVFLAGS:
 				return ControlIrqDevflags(raw[2:4])
+			elif id == ControlIrq.IRQ_HALT:
+				return ControlIrqHalt()
 			else:
 				raise CNCCException("Unknown ControlIrq ID: %d" % id)
 		except (IndexError, KeyError):
@@ -420,6 +425,13 @@ class ControlIrqDevflags(ControlIrq):
 
 	def __repr__(self):
 		return "DEVFLAGS interrupt: %04X" % (self.devFlags)
+
+class ControlIrqHalt(ControlIrq):
+	def __init__(self, hdrFlags=0):
+		ControlIrq.__init__(self, ControlIrq.IRQ_HALT, hdrFlags)
+
+	def __repr__(self):
+		return "HALT interrupt"
 
 class JogState:
 	KEEPALIFE_TIMEOUT = 0.3
@@ -533,6 +545,7 @@ class CNCControl:
 
 	def __initializeData(self):
 		self.deviceIsOn = False
+		self.motionHaltRequest = False
 		self.axisPositions = { }
 		self.jogStates = { }
 		for ax in ALL_AXES:
@@ -607,6 +620,11 @@ class CNCControl:
 			else:
 				print "CNC Control was turned OFF"
 				self.deviceIsOn = False
+		elif irq.id == ControlIrq.IRQ_HALT:
+			self.motionHaltRequest = True
+			for jogState in self.jogStates.values():
+				jogState.reset()
+			self.spindleCommand = 0
 		else:
 			print "Unhandled IRQ:", irq
 		return True
@@ -663,6 +681,13 @@ class CNCControl:
 		if not self.deviceAvailable:
 			return False
 		return self.deviceIsOn
+
+	def haveMotionHaltRequest(self):
+		if not self.deviceAvailable:
+			return False
+		halt = self.motionHaltRequest
+		self.motionHaltRequest = False
+		return halt
 
 	def getSpindleCommand(self):
 		# Returns -1, 0 or 1 for reverse, stop or forward.
