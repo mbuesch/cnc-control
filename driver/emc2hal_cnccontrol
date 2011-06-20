@@ -227,6 +227,9 @@ def eventloop(h, cncc):
 
 			cncc.setDebugging(0)
 			cncc.setTwohandEnabled(h["config.twohand"])
+			axes = map(lambda ax: ax if h["axis.%s.enable" % ax] else "",
+				   ALL_AXES)
+			cncc.setEnabledAxes(filter(None, axes))
 
 			while 1: # Event loop
 				if not cncc.eventWait():

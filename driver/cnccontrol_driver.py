@@ -102,6 +102,7 @@ class ControlMsg:
 	CONTROL_AXISUPDATE		= 3
 	CONTROL_SPINDLEUPDATE		= 4
 	CONTROL_FOUPDATE		= 5
+	CONTROL_AXISENABLE		= 6
 	CONTROL_ENTERBOOT		= 0xA0
 	CONTROL_EXITBOOT		= 0xA1
 	CONTROL_BOOT_WRITEBUF		= 0xA2
@@ -180,6 +181,16 @@ class ControlMsgFoupdate(ControlMsg):
 	def getRaw(self):
 		raw = ControlMsg.getRaw(self)
 		raw.append(self.percent & 0xFF)
+		return raw
+
+class ControlMsgAxisenable(ControlMsg):
+	def __init__(self, mask, hdrFlags=0):
+		ControlMsg.__init__(self, ControlMsg.CONTROL_AXISENABLE, hdrFlags)
+		self.mask = mask
+
+	def getRaw(self):
+		raw = ControlMsg.getRaw(self)
+		raw.append(self.mask & 0xFF)
 		return raw
 
 class ControlMsgEnterboot(ControlMsg):
@@ -744,6 +755,18 @@ class CNCControl:
 		if not reply.isOK():
 			raise CNCCException("Axis update failed: %s" % str(reply))
 		self.axisPositions[axis] = pos
+
+	def setEnabledAxes(self, axes):
+		# Set the enabled axes.
+		if not self.deviceAvailable:
+			return
+		mask = 0
+		for ax in axes:
+			mask |= (1 << AXIS2NUMBER[ax])
+		msg = ControlMsgAxisenable(mask)
+		reply = self.controlMsgSyncReply(msg)
+		if not reply.isOK():
+			raise CNCCException("Failed to set axis mask: %s" % str(reply))
 
 	def getJogState(self, axis):
 		# Returns (direction, incremental, velocity)

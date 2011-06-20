@@ -120,7 +120,6 @@ static void select_next_axis(void)
 	}
 	state.axis = axis;
 
-	update_userinterface();
 	irq_restore(sreg);
 }
 
@@ -142,7 +141,6 @@ static void select_previous_axis(void)
 	}
 	state.axis = axis;
 
-	update_userinterface();
 	irq_restore(sreg);
 }
 
@@ -643,7 +641,8 @@ static void interpret_jogwheel(int8_t jogwheel, bool wheel_pressed)
 		/* Select bigger INC step. */
 		state.selected_increment = increment_size_up(
 			state.selected_increment);
-		state.lcd_need_update = 1;
+		state.softkey[1] = SK1_INCREMENT;
+		update_userinterface();
 		return;
 	}
 
@@ -670,7 +669,7 @@ static void interpret_jogwheel(int8_t jogwheel, bool wheel_pressed)
 		default:
 			BUG_ON(1);
 		}
-		state.lcd_need_update = 1;
+		update_userinterface();
 	}
 }
 
@@ -752,12 +751,16 @@ static void interpret_buttons(void)
 	if (rising_edge(BTN_AXIS_NEXT)) {
 		jog(0);
 		select_next_axis();
+		state.softkey[0] = SK0_AXISPOS;
+		update_userinterface();
 	}
 
 	/* Previous axis selection */
 	if (rising_edge(BTN_AXIS_PREV)) {
 		jog(0);
 		select_previous_axis();
+		state.softkey[0] = SK0_AXISPOS;
+		update_userinterface();
 	}
 
 	/* Rapid-move button */
