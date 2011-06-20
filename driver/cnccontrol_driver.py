@@ -3,7 +3,7 @@
 #
 # CNC-control - Host driver
 #
-# Copyright (C) 2011 Michael Buesch <mb@bues.ch>
+# Copyright (C) 2011 Michael Buesch <m@bues.ch>
 #
 """
 
@@ -21,19 +21,8 @@ EP_OUT		= 0x02
 EP_IRQ		= 0x81
 
 ALL_AXES	= "xyza"
-
-AXIS2NUMBER	= {
-	"x" : 0,
-	"y" : 1,
-	"z" : 2,
-	"a" : 3,
-}
-NUMBER2AXIS	= {
-	0 : "x",
-	1 : "y",
-	2 : "z",
-	3 : "a",
-}
+AXIS2NUMBER	= dict(map(lambda x: (x[1], x[0]), enumerate(ALL_AXES)))
+NUMBER2AXIS	= dict(enumerate(ALL_AXES))
 
 
 def equal(a, b, threshold=0.00001):

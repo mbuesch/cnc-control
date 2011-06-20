@@ -4,7 +4,7 @@
 # CNC-control
 # EMC2 HAL module
 #
-# Copyright (C) 2011 Michael Buesch <mb@bues.ch>
+# Copyright (C) 2011 Michael Buesch <m@bues.ch>
 #
 """
 
@@ -176,6 +176,14 @@ def updatePins(ctx):
 			continue
 		ctx.cncc.setAxisPosition(ax, ctx.h["axis.%s.pos" % ax])
 
+def deviceInitialize(h, cncc):
+	# CNC-Control USB device connected. Initialize it.
+	cncc.setDebugging(0)
+	cncc.setTwohandEnabled(h["config.twohand"])
+	axes = map(lambda ax: ax if h["axis.%s.enable" % ax] else "",
+		   ALL_AXES)
+	cncc.setEnabledAxes(filter(None, axes))
+
 def createPins(h):
 	# Device config
 	h.newparam("config.twohand", HAL_BIT, HAL_RW)
@@ -225,12 +233,7 @@ def eventloop(h, cncc):
 			if not cncc.probe():
 				time.sleep(1)
 
-			cncc.setDebugging(0)
-			cncc.setTwohandEnabled(h["config.twohand"])
-			axes = map(lambda ax: ax if h["axis.%s.enable" % ax] else "",
-				   ALL_AXES)
-			cncc.setEnabledAxes(filter(None, axes))
-
+			deviceInitialize(h, cncc)
 			while 1: # Event loop
 				if not cncc.eventWait():
 					break
