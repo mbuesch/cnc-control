@@ -265,11 +265,11 @@ class ControlReply:
 			id = raw[0]
 			flags = raw[1]
 			if id == ControlReply.REPLY_OK:
-				return ControlReplyOk()
+				return ControlReplyOk(hdrFlags=flags)
 			elif id == ControlReply.REPLY_ERROR:
-				return ControlReplyError(raw[2])
+				return ControlReplyError(raw[2], hdrFlags=flags)
 			elif id == ControlReply.REPLY_VAL16:
-				return ControlReplyVal16(raw[2] | (raw[3] << 8))
+				return ControlReplyVal16(raw[2] | (raw[3] << 8), hdrFlags=flags)
 			else:
 				CNCCException("Unknown ControlReply ID: %d" % id)
 		except (IndexError, KeyError):
