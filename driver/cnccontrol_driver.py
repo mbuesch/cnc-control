@@ -530,17 +530,17 @@ class CNCControl:
 				self.deviceIsOn = True
 		return True
 
-	def reconnect(self, timeout=5000):
+	def reconnect(self, timeout=15):
 		if not self.deviceAvailable:
 			return False
+		timeout = datetime.now() + timedelta(seconds=timeout)
 		self.__deviceUnplug()
-		while timeout > 0:
+		while timeout > datetime.now():
 			try:
 				if self.probe():
 					return True
 			except (CNCCException), e:
 				pass
-			timeout -= 50
 			time.sleep(0.05)
 		return False
 

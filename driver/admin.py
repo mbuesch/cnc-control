@@ -138,7 +138,7 @@ def handle_enterboot(context, arg):
 		# Enter CPU bootloader
 		msg = ControlMsgEnterboot(ControlMsg.TARGET_CPU)
 		cncc.controlMsg(msg)
-		time.sleep(1)
+		time.sleep(0.3)
 		if not cncc.reconnect():
 			raise CNCCException("Failed to enter CPU bootloader. "
 				"The USB device did not reconnect.")
@@ -162,12 +162,12 @@ def handle_exitboot(context, arg):
 	# Exit coprocessor bootloader
 	msg = ControlMsgExitboot(ControlMsg.TARGET_COPROC)
 	reply = cncc.controlMsgSyncReply(msg, timeout=1000)
-#	if not reply.isOK():
-#FIXME		raise CNCCException("Failed to exit coprocessor bootloader: %s" % str(reply))
+	if not reply.isOK():
+		print "Failed to exit coprocessor bootloader: %s" % str(reply)
 	# Exit CPU bootloader
 	msg = ControlMsgExitboot(ControlMsg.TARGET_CPU)
 	cncc.controlMsg(msg)
-	time.sleep(1)
+	time.sleep(0.3)
 	if not cncc.reconnect():
 		raise CNCCException("Failed to exit CPU bootloader. "
 			"The USB device did not reconnect.")
