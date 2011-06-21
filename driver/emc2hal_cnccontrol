@@ -91,9 +91,9 @@ class ValueBalance:
 			self.incBit.startDuty()
 
 def updatePins(ctx):
-	if not ctx.h["machine.is-on"]:
-		return
-	if not ctx.cncc.deviceIsTurnedOn():
+	ctx.cncc.setEstopState(ctx.h["machine.estop-active"])
+	if not ctx.h["machine.is-on"] or\
+	   not ctx.cncc.deviceIsTurnedOn():
 		return
 
 	# Halt the program, if requested
@@ -190,7 +190,7 @@ def createPins(h):
 
 	# Machine state
 	h.newpin("machine.is-on", HAL_BIT, HAL_IN)
-	h.newpin("machine.estop-active", HAL_BIT, HAL_IN)#TODO
+	h.newpin("machine.estop-active", HAL_BIT, HAL_IN)
 
 	# Axis
 	for ax in ALL_AXES:

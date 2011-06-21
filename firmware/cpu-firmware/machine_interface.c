@@ -202,6 +202,13 @@ static int8_t rx_raw_message(const void *msg, uint8_t ctl_size,
 		set_axis_enable_mask(ctl->axisenable.mask);
 		break;
 	}
+	case CONTROL_ESTOPUPDATE: {
+		if (ctl_size < CONTROL_MSG_SIZE(estopupdate))
+			goto err_size;
+
+		set_estop_state(!!ctl->estopupdate.asserted);
+		break;
+	}
 	case CONTROL_ENTERBOOT: {
 		if (ctl_size < CONTROL_MSG_SIZE(enterboot))
 			goto err_size;

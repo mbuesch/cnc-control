@@ -86,6 +86,9 @@ struct device_state {
 
 	/* Softkey states */
 	uint8_t softkey[2];
+
+	/* Emergency stop state (read only). */
+	bool estop;
 };
 static struct device_state state;
 
@@ -340,6 +343,12 @@ static void do_update_lcd(void)
 {
 	uint8_t sreg;
 	uint16_t devflags = get_active_devflags();
+
+	if (state.estop) {
+		lcd_cursor(0, 2);
+		lcd_put_pstr("ESTOP ACTIVE");
+		return;
+	}
 
 	switch (state.softkey[0]) {
 	case SK0_AXISPOS: {
@@ -878,6 +887,14 @@ void feed_override_feedback_update(uint8_t percent)
 	update_userinterface();
 }
 
+/* Called in IRQ context! */
+void set_estop_state(bool asserted)
+{
+	state.estop = asserted;
+	mb();
+	update_userinterface();
+}
+
 void update_userinterface(void)
 {
 	mb();
@@ -958,12 +975,15 @@ int main(void)
 			spi_async_ms_tick();
 		}
 
-		if (state.button_update_required)
-			trigger_button_state_fetching();
-		interpret_buttons();
-		interpret_feed_override(0);
-		handle_spindle_change_requests();
-		handle_jog_keepalife();
+		mb();
+		if (!state.estop) {
+			if (state.button_update_required)
+				trigger_button_state_fetching();
+			interpret_buttons();
+			interpret_feed_override(0);
+			handle_spindle_change_requests();
+			handle_jog_keepalife();
+		}
 
 		mb();
 		if (state.lcd_need_update || state.leds_need_update) {

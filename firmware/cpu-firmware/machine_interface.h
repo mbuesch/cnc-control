@@ -122,6 +122,7 @@ enum control_id {
 	CONTROL_SPINDLEUPDATE,		/* Spindle state update */
 	CONTROL_FOUPDATE,		/* Feed override update */
 	CONTROL_AXISENABLE,		/* Set the axis-enable mask */
+	CONTROL_ESTOPUPDATE,		/* E-stop status update */
 
 	/* Bootloader messages */
 	CONTROL_ENTERBOOT = 0xA0,	/* Enter the CPU/coprocessor bootloader */
@@ -185,6 +186,9 @@ struct control_message {
 		struct {
 			uint8_t mask;
 		} __packed axisenable;
+		struct {
+			uint8_t asserted;
+		} __packed estopupdate;
 
 		/* Bootloader messages */
 		struct {

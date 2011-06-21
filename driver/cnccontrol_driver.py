@@ -92,6 +92,7 @@ class ControlMsg:
 	CONTROL_SPINDLEUPDATE		= 4
 	CONTROL_FOUPDATE		= 5
 	CONTROL_AXISENABLE		= 6
+	CONTROL_ESTOPUPDATE		= 7
 	CONTROL_ENTERBOOT		= 0xA0
 	CONTROL_EXITBOOT		= 0xA1
 	CONTROL_BOOT_WRITEBUF		= 0xA2
@@ -180,6 +181,16 @@ class ControlMsgAxisenable(ControlMsg):
 	def getRaw(self):
 		raw = ControlMsg.getRaw(self)
 		raw.append(self.mask & 0xFF)
+		return raw
+
+class ControlMsgEstopupdate(ControlMsg):
+	def __init__(self, asserted, hdrFlags=0):
+		ControlMsg.__init__(self, ControlMsg.CONTROL_ESTOPUPDATE, hdrFlags)
+		self.asserted = 1 if asserted else 0
+
+	def getRaw(self):
+		raw = ControlMsg.getRaw(self)
+		raw.append(self.asserted & 0xFF)
 		return raw
 
 class ControlMsgEnterboot(ControlMsg):
@@ -546,6 +557,7 @@ class CNCControl:
 
 	def __initializeData(self):
 		self.deviceIsOn = False
+		self.estop = False
 		self.motionHaltRequest = False
 		self.axisPositions = { }
 		self.jogStates = { }
@@ -677,6 +689,18 @@ class CNCControl:
 		reply = self.controlMsgSyncReply(msg)
 		if not reply.isOK():
 			raise CNCCException("Failed to set debugging flags")
+
+	def setEstopState(self, asserted):
+		# Send the estop state to the device
+		if not self.deviceAvailable:
+			return
+		if asserted == self.estop:
+			return # No change
+		msg = ControlMsgEstopupdate(asserted)
+		reply = self.controlMsgSyncReply(msg)
+		if not reply.isOK():
+			raise CNCCException("Failed to send ESTOP update")
+		self.estop = asserted
 
 	def deviceIsTurnedOn(self):
 		if not self.deviceAvailable:

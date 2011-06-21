@@ -121,6 +121,8 @@ void axis_pos_update(uint8_t axis, fixpt_t absolute_pos);
 void spindle_state_update(bool on);
 /* Feed override feedback */
 void feed_override_feedback_update(uint8_t percent);
+/* Set the estop feedback state */
+void set_estop_state(bool asserted);
 
 /* Request an update of the user interface */
 void update_userinterface(void);
