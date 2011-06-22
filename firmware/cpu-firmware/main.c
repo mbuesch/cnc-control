@@ -322,7 +322,7 @@ static uint16_t get_buttons(int8_t *_jogwheel)
 		extports_set(EXT_LED_TWOHAND);
 	} else {
 		extports_clear(EXT_LED_TWOHAND);
-		if (get_active_devflags() & DEVICE_FLG_TWOHANDEN) {
+		if (devflag_is_set(DEVICE_FLG_TWOHANDEN)) {
 			/* Security switch is not pressed. Report security
 			 * related buttons as released. */
 			if (!spindle_is_on())
@@ -728,10 +728,7 @@ static void interpret_buttons(void)
 
 	/* on/off button */
 	if (rising_edge(BTN_ONOFF)) {
-		uint16_t flags;
-
-		flags = get_active_devflags();
-		if (flags & DEVICE_FLG_ON)
+		if (devflag_is_set(DEVICE_FLG_ON))
 			modify_devflags(DEVICE_FLG_ON, 0);
 		else
 			modify_devflags(DEVICE_FLG_ON, DEVICE_FLG_ON);

@@ -31,7 +31,7 @@ static int debug_putchar(char c, FILE *stream)
 
 void _debug_printf(const prog_char *_fmt, ...)
 {
-	if (!(get_active_devflags() & DEVICE_FLG_NODEBUG)) {
+	if (debug_enabled()) {
 		char fmt[64];
 		va_list args;
 
@@ -44,7 +44,7 @@ void _debug_printf(const prog_char *_fmt, ...)
 
 void debug_dumpmem(const void *_mem, uint8_t size)
 {
-	if (!(get_active_devflags() & DEVICE_FLG_NODEBUG)) {
+	if (debug_enabled()) {
 		const uint8_t *mem = _mem;
 		uint8_t i;
 

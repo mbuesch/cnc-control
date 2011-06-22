@@ -42,7 +42,7 @@ static struct tiny_list tx_free;
 static bool irq_queue_overflow;
 
 
-static uint16_t active_devflags;
+uint16_t active_devflags;
 
 
 void usb_app_reset(void)

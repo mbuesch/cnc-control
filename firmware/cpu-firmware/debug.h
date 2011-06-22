@@ -12,9 +12,14 @@ void _debug_printf(const prog_char *fmt, ...);
 #define debug_printf(fmt, ...)	_debug_printf(PSTR(fmt) ,##__VA_ARGS__)
 void debug_dumpmem(const void *_mem, uint8_t size);
 
+static inline bool debug_enabled(void)
+{
+	return !devflag_is_set(DEVICE_FLG_NODEBUG);
+}
+
 static inline bool debug_verbose(void)
 {
-	return !!(get_active_devflags() & DEVICE_FLG_VERBOSEDBG);
+	return devflag_is_set(DEVICE_FLG_VERBOSEDBG);
 }
 
 

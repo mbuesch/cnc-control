@@ -353,6 +353,36 @@ void send_interrupt_discard_old(struct control_interrupt *irq,
  */
 uint16_t get_active_devflags(void);
 
+static inline uint8_t get_active_devflags_low(void)
+{
+	extern uint16_t active_devflags;
+	mb();
+	return lo8(active_devflags); /* atomic on AVR */
+}
+static inline uint8_t get_active_devflags_high(void)
+{
+	extern uint16_t active_devflags;
+	mb();
+	return hi8(active_devflags); /* atomic on AVR */
+}
+/** devflag_is_set - Flag test optimized for constant mask.
+ * Inefficient for non-const mask! */
+static inline bool devflag_is_set(const uint16_t mask)
+{
+	bool res;
+
+	if (mask == 0)
+		res = 0;
+	else if (hi8(mask) == 0)
+		res = !!(get_active_devflags_low() & lo8(mask));
+	else if (lo8(mask) == 0)
+		res = !!(get_active_devflags_high() & hi8(mask));
+	else
+		res = !!(get_active_devflags() & mask);
+
+	return res;
+}
+
 /** modify_devflags - Modify device flags atomically
  * and send notification interrupt to the host.
  */
