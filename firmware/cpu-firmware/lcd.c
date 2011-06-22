@@ -39,7 +39,8 @@ uint8_t lcd_cursor_pos;
 static void lcd_enable_pulse(void)
 {
 	LCD_PORT |= LCD_PIN_E;
-	udelay(1);
+	nop();
+	nop();
 	LCD_PORT &= ~LCD_PIN_E;
 }
 
@@ -96,33 +97,23 @@ void lcd_commit(void)
 		for (col = 0; col < LCD_NR_COLUMNS; col++)
 			lcd_data(*buf++);
 	}
-	/* Sync hw-cursor with sw-cursor. */
-	lcd_hwcursor(lcd_getline(), lcd_getcolumn());
-}
-
-static inline void lcd_char_out(uint8_t c)
-{
-	uint8_t column;
-
-//FIXME line/col handling needs a rewrite
-	lcd_buffer[lcd_cursor_pos] = c;
-	column = lcd_getcolumn() + 1;
-	if (column < LCD_NR_COLUMNS)
-		lcd_cursor(lcd_getline(), column);
 }
 
 void lcd_put_char(char c)
 {
+	uint8_t line, column;
+
 	if (c == '\r') {
 		lcd_cursor(lcd_getline(), 0);
-		return;
-	}
-	if (c == '\n') {
-		uint8_t line = lcd_getline() + 1;
+	} else if (c == '\n') {
+		line = lcd_getline() + 1;
 		lcd_cursor(line >= LCD_NR_LINES ? 0 : line, 0);
-		return;
+	} else {
+		lcd_buffer[lcd_cursor_pos] = c;
+		column = lcd_getcolumn() + 1;
+		if (column < LCD_NR_COLUMNS)
+			lcd_cursor(lcd_getline(), column);
 	}
-	lcd_char_out(c);
 }
 
 static int lcd_stream_putchar(char c, FILE *unused)
@@ -180,9 +171,9 @@ void lcd_init(void)
 	/* No DD-autoinc, no display shifting. */
 	lcd_command(0x04);
 	lcd_hwclear();
+
 	lcd_cursor_pos = 0;
 	lcd_clear_buffer();
-
 	lcd_printf("CNC-Control\nInitializing");
 	lcd_commit();
 }
