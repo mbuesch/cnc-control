@@ -40,6 +40,8 @@
  * need a compiler memory clobber. */
 #define mb()			__asm__ __volatile__("" : : : "memory")
 
+#define ACCESS_ONCE(x)		(*(volatile typeof(x) *)&(x))
+
 /* Convert something indirectly to a string */
 #define __stringify(x)		#x
 #define stringify(x)		__stringify(x)

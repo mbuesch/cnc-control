@@ -29,7 +29,7 @@ static int debug_putchar(char c, FILE *stream)
 	return 0;
 }
 
-void _debug_printf(const prog_char *_fmt, ...)
+void do_debug_printf(const prog_char *_fmt, ...)
 {
 	if (debug_enabled()) {
 		char fmt[64];
