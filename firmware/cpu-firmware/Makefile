@@ -125,7 +125,7 @@ $(APP_BIN): $(call OBJS,$(APP_SRCS),app)
 	$(QUIET_CC) $(CFLAGS) $(APP_CFLAGS) -o $(APP_BIN) \
 		$(call OBJS,$(APP_SRCS),app) $(LDFLAGS) $(APP_LDFLAGS)
 else
-$(APP_BIN): $(APP_SRCS)
+$(APP_BIN): $(APP_SRCS) $(call DEPS,$(APP_SRCS),app)
 	$(QUIET_CC) $(CFLAGS) $(APP_CFLAGS) $(COMBINE_CFLAGS) -o $(APP_BIN) \
 		$(APP_SRCS) $(LDFLAGS) $(APP_LDFLAGS)
 endif
@@ -135,7 +135,7 @@ $(BOOT_BIN): $(call OBJS,$(BOOT_SRCS),boot)
 	$(QUIET_CC) $(CFLAGS) $(BOOT_CFLAGS) -o $(BOOT_BIN) \
 		$(call OBJS,$(BOOT_SRCS),boot) $(LDFLAGS) $(BOOT_LDFLAGS)
 else
-$(BOOT_BIN): $(BOOT_SRCS)
+$(BOOT_BIN): $(BOOT_SRCS) $(call DEPS,$(BOOT_SRCS),boot)
 	$(QUIET_CC) $(CFLAGS) $(BOOT_CFLAGS) $(COMBINE_CFLAGS) -o $(BOOT_BIN) \
 		$(BOOT_SRCS) $(LDFLAGS) $(BOOT_LDFLAGS)
 endif
