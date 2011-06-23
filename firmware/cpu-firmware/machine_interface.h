@@ -101,15 +101,28 @@ enum axis_id {
 	AXIS_X,
 	AXIS_Y,
 	AXIS_Z,
+	AXIS_U,
+	AXIS_V,
+	AXIS_W,
 	AXIS_A,
+	AXIS_B,
+	AXIS_C,
 
-	AXIS_INVALID,
-	NR_AXIS = AXIS_INVALID,
+	NR_AXIS,
+	AXIS_INVALID = NR_AXIS,
 };
 
 static inline uint8_t axis_is_angular(enum axis_id id)
 {
-	return (id == AXIS_A);
+	switch (id) {
+	case AXIS_A:
+	case AXIS_B:
+	case AXIS_C:
+		return 1;
+	default:
+		break;
+	}
+	return 0;
 }
 
 #define control_crc8(crc, data)		_crc_ibutton_update(crc, data)
@@ -185,7 +198,7 @@ struct control_message {
 			uint8_t percent;
 		} __packed feedoverride;
 		struct {
-			uint8_t mask;
+			uint16_t mask;
 		} __packed axisenable;
 		struct {
 			uint8_t asserted;

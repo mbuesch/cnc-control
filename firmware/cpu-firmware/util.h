@@ -137,6 +137,6 @@ extern void _pgm_read_invalid_type_size(void);
 
 /* Find first set bit.
  * Returns 0, if no bit is set. */
-uint8_t ffs8(uint8_t value);
+uint8_t ffs16(uint16_t value);
 
 #endif /* MY_UTIL_H_ */

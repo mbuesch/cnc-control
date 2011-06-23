@@ -61,7 +61,7 @@ struct device_state {
 	fixpt_t increments[6];		/* Possible increments (Modified in IRQ context) */
 	uint8_t increment_index;	/* Selected increment for jog (Modified in IRQ context) */
 	uint8_t axis;			/* Selected axis (enum axis_id) (Modified in IRQ context) */
-	uint8_t axis_enable_mask;	/* Enabled axes (Modified in IRQ context) */
+	uint16_t axis_enable_mask;	/* Enabled axes (Modified in IRQ context) */
 
 	uint8_t jog;			/* enum jog_state */
 	fixpt_t jog_velocity;		/* Jogging velocity */
@@ -99,6 +99,17 @@ jiffies_t jiffies;
 typedef uint16_t extports_t;
 static extports_t extports;
 
+
+static char get_axis_name(uint8_t axis)
+{
+	static prog_char names[] = {
+		'X', 'Y', 'Z', 'U', 'V', 'W', 'A', 'B', 'C',
+	};
+
+	if (axis >= ARRAY_SIZE(names))
+		return '?';
+	return pgm_read(&names[axis]);
+}
 
 static uint8_t find_next_increment_index(uint8_t start)
 {
@@ -365,23 +376,7 @@ static void do_update_lcd(void)
 		pos = state.positions[axis];
 		irq_restore(sreg);
 
-		switch (axis) {
-		case AXIS_X:
-			lcd_put_char('X');
-			break;
-		case AXIS_Y:
-			lcd_put_char('Y');
-			break;
-		case AXIS_Z:
-			lcd_put_char('Z');
-			break;
-		case AXIS_A:
-			lcd_put_char('A');
-			break;
-		default:
-			BUG_ON(1);
-		}
-
+		lcd_put_char(get_axis_name(axis));
 		lcd_printf(FIXPT_FMT3, FIXPT_ARG3(pos));
 		break;
 	}
@@ -857,13 +852,13 @@ static void interpret_feed_override(bool force)
 }
 
 /* Called in IRQ context! */
-void set_axis_enable_mask(uint8_t mask)
+void set_axis_enable_mask(uint16_t mask)
 {
 	BUG_ON(mask == 0);
 
 	state.axis_enable_mask = mask;
 	if (!(BIT(state.axis) & mask))
-		state.axis = ffs8(mask) - 1;
+		state.axis = ffs16(mask) - 1;
 	mb();
 	update_userinterface();
 }

@@ -100,11 +100,12 @@ void reboot(void)
 	while (1);
 }
 
-uint8_t ffs8(uint8_t value)
+uint8_t ffs16(uint16_t value)
 {
-	uint8_t mask, count;
+	uint16_t mask;
+	uint8_t count;
 
-	for (mask = 0x01, count = 1; mask; mask <<= 1, count++) {
+	for (mask = 1, count = 1; mask; mask <<= 1, count++) {
 		if (value & mask)
 			return count;
 	}

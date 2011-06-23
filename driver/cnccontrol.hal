@@ -1,0 +1,76 @@
+# ---------------------------------------
+# --- CNC Control
+# --- EMC2 HAL configuration file
+# ------
+
+loadusr -Wn cnccontrol emc2hal_cnccontrol
+
+
+# --- Device config ---
+setp	cnccontrol.config.twohand			1	# "two-hand" button enabled?
+
+# --- Machine state ---
+net	cncc-on		halui.machine.is-on		=> cnccontrol.machine.is-on
+net	cncc-estop	halui.estop.is-activated	=> cnccontrol.machine.estop-active
+
+# --- Axis enable/disable ---
+setp	cnccontrol.axis.x.enable			1
+setp	cnccontrol.axis.y.enable			1
+setp	cnccontrol.axis.z.enable			1
+setp	cnccontrol.axis.u.enable			0
+setp	cnccontrol.axis.v.enable			0
+setp	cnccontrol.axis.w.enable			0
+setp	cnccontrol.axis.a.enable			0
+setp	cnccontrol.axis.b.enable			0
+setp	cnccontrol.axis.c.enable			0
+
+# --- Axis position feedback ---
+net	cncc-xpos	halui.axis.0.pos-feedback	=> cnccontrol.axis.x.pos
+net	cncc-ypos	halui.axis.1.pos-feedback	=> cnccontrol.axis.y.pos
+net	cncc-zpos	halui.axis.2.pos-feedback	=> cnccontrol.axis.z.pos
+# If more axes are enabled, connect pins here.
+
+# --- Jogging ---
+setp	cnccontrol.jog.velocity-rapid			20000	# "rapid" move velocity
+setp	cnccontrol.jog.increment.0			0.001	# 1st selectable increment
+setp	cnccontrol.jog.increment.1			0.01	# 2nd selectable increment
+setp	cnccontrol.jog.increment.2			0.1	# 3rd selectable increment
+setp	cnccontrol.jog.increment.3			0.0	# 4th selectable increment
+setp	cnccontrol.jog.increment.4			0.0	# 5th selectable increment
+setp	cnccontrol.jog.increment.5			0.0	# 6th selectable increment
+net	cncc-jogvel	cnccontrol.jog.velocity		=> halui.jog-speed
+net	cncc-jogxp	cnccontrol.jog.x.plus		=> halui.jog.0.plus
+net	cncc-jogxm	cnccontrol.jog.x.minus		=> halui.jog.0.minus
+net	cncc-jogxinc	cnccontrol.jog.x.inc		=> halui.jog.0.increment
+net	cncc-jogxincp	cnccontrol.jog.x.inc-plus	=> halui.jog.0.increment-plus
+net	cncc-jogxincm	cnccontrol.jog.x.inc-minus	=> halui.jog.0.increment-minus
+net	cncc-jogyp	cnccontrol.jog.y.plus		=> halui.jog.1.plus
+net	cncc-jogym	cnccontrol.jog.y.minus		=> halui.jog.1.minus
+net	cncc-jogyinc	cnccontrol.jog.y.inc		=> halui.jog.1.increment
+net	cncc-jogyincp	cnccontrol.jog.y.inc-plus	=> halui.jog.1.increment-plus
+net	cncc-jogyincm	cnccontrol.jog.y.inc-minus	=> halui.jog.1.increment-minus
+net	cncc-jogzp	cnccontrol.jog.z.plus		=> halui.jog.2.plus
+net	cncc-jogzm	cnccontrol.jog.z.minus		=> halui.jog.2.minus
+net	cncc-jogzinc	cnccontrol.jog.z.inc		=> halui.jog.2.increment
+net	cncc-jogzincp	cnccontrol.jog.z.inc-plus	=> halui.jog.2.increment-plus
+net	cncc-jogzincm	cnccontrol.jog.z.inc-minus	=> halui.jog.2.increment-minus
+# If more axes are enabled, connect pins here.
+
+# --- Master spindle control ---
+net	cncc-srunb	halui.spindle.runs-backward	=> cnccontrol.spindle.runs-bwd
+net	cncc-srunf	halui.spindle.runs-forward	=> cnccontrol.spindle.runs-fwd
+net	cncc-sfwd	cnccontrol.spindle.forward	=> halui.spindle.forward
+net	cncc-srev	cnccontrol.spindle.reverse	=> halui.spindle.reverse
+net	cncc-sstart	cnccontrol.spindle.start	=> halui.spindle.start
+net	cncc-sstop	cnccontrol.spindle.stop		=> halui.spindle.stop
+
+# --- Feed override ---
+net	cncc-foscale	cnccontrol.feed-override.scale	=> halui.feed-override.scale
+net	cncc-fodec	cnccontrol.feed-override.dec	=> halui.feed-override.decrease
+net	cncc-foinc	cnccontrol.feed-override.inc	=> halui.feed-override.increase
+net	cncc-foval	halui.feed-override.value	=> cnccontrol.feed-override.value
+setp	cnccontrol.feed-override.max-value		1.2	# Feed override max (1.0 = 100%)
+setp	cnccontrol.feed-override.min-value		0	# Feed override min
+
+# --- Program control ---
+net	cncc-pstop	cnccontrol.program.stop		=> halui.program.stop

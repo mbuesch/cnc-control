@@ -114,7 +114,7 @@ void leds_enable(bool enable);
 /* Reset the device */
 void reset_device_state(void);
 /* Axis mask */
-void set_axis_enable_mask(uint8_t mask);
+void set_axis_enable_mask(uint16_t mask);
 /* Axis manipulation */
 void axis_pos_update(uint8_t axis, fixpt_t absolute_pos);
 /* Spindle state */

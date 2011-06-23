@@ -20,7 +20,7 @@ EP_IN		= 0x82
 EP_OUT		= 0x02
 EP_IRQ		= 0x81
 
-ALL_AXES	= "xyza"
+ALL_AXES	= "xyzuvwabc"
 AXIS2NUMBER	= dict(map(lambda x: (x[1], x[0]), enumerate(ALL_AXES)))
 NUMBER2AXIS	= dict(enumerate(ALL_AXES))
 
@@ -193,7 +193,7 @@ class ControlMsgAxisenable(ControlMsg):
 
 	def getRaw(self):
 		raw = ControlMsg.getRaw(self)
-		raw.append(self.mask & 0xFF)
+		raw.extend( [self.mask & 0xFF, (self.mask >> 8) & 0xFF] )
 		return raw
 
 class ControlMsgEstopupdate(ControlMsg):
