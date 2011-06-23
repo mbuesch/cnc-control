@@ -6,3 +6,29 @@
 Copyright (c) 2009-2011 Michael Buesch <m@bues.ch>
 
 
+
+--- Integrating CNC-Control into EMC2 ---
+
+EMC 2.5.0(-pre) or later is required.
+
+Integration into EMC2 is easy, because the CNC-Control HAL file is pretty
+much selfcontained. Just copy the driver/cnccontrol.hal file to your EMC2
+configuration directory. Then modify your .ini file to load the new .hal file.
+EMC2 can load multiple HAL files. So all that is needed usually is to add
+a line like this
+HALFILE = cnccontrol.hal
+to the end of the [HAL] section of your .ini file. Add the new HALFILE line
+below any exitsing HALFILE line.
+
+To install the HAL driver, just copy it somewhere you can execute files from.
+We suggest to just copy the driver to the EMC2 configuration directory as well:
+cp -a driver/{cnccontrol_driver.py,emc2hal_cnccontrol} /MY/EMC2/CONFIG/DIRECTORY/
+After that you need to adjust your PATH environment variable to include
+the EMC2 config directory (or the directory where you put the files).
+
+As the CNC-Control HAL driver has to access the CNC-Control USB device, either
+startup EMC as root, or configure your USB device permissions (udev) to allow
+binding the userspace USB driver as restricted user to the device.
+
+All configuration of the CNC-Control device can be done through the
+cnccontrol.hal file. Just look into the file and read the comments.
