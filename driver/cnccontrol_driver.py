@@ -63,6 +63,11 @@ class FixPt:
 			self.raw = (raw & 0xFF, (raw >> 8) & 0xFF,
 				    (raw >> 16) & 0xFF, (raw >> 24) & 0xFF)
 			self.floatval = val
+		elif type(val) == int:
+			raw = val << self.FIXPT_FRAC_BITS
+			self.raw = (raw & 0xFF, (raw >> 8) & 0xFF,
+				    (raw >> 16) & 0xFF, (raw >> 24) & 0xFF)
+			self.floatval = float(val)
 		else: # 32bit LE two's complement
 			self.raw = tuple(val)
 			raw = twos32(val[0] | (val[1] << 8) |\
@@ -93,6 +98,7 @@ class ControlMsg:
 	CONTROL_FOUPDATE		= 5
 	CONTROL_AXISENABLE		= 6
 	CONTROL_ESTOPUPDATE		= 7
+	CONTROL_SETINCREMENT		= 8
 	CONTROL_ENTERBOOT		= 0xA0
 	CONTROL_EXITBOOT		= 0xA1
 	CONTROL_BOOT_WRITEBUF		= 0xA2
@@ -191,6 +197,20 @@ class ControlMsgEstopupdate(ControlMsg):
 	def getRaw(self):
 		raw = ControlMsg.getRaw(self)
 		raw.append(self.asserted & 0xFF)
+		return raw
+
+class ControlMsgSetincrement(ControlMsg):
+	MAX_INDEX = 5
+
+	def __init__(self, increment, index, hdrFlags=0):
+		ControlMsg.__init__(self, ControlMsg.CONTROL_SETINCREMENT, hdrFlags)
+		self.increment = FixPt(increment)
+		self.index = index
+
+	def getRaw(self):
+		raw = ControlMsg.getRaw(self)
+		raw.extend(self.increment.getRaw())
+		raw.append(self.index & 0xFF)
 		return raw
 
 class ControlMsgEnterboot(ControlMsg):
@@ -673,6 +693,17 @@ class CNCControl:
 		reply = self.controlMsgSyncReply(msg)
 		if not reply.isOK():
 			raise CNCCException("Failed to set Twohand flag")
+
+	def setIncrementAtIndex(self, index, increment):
+		if not self.deviceAvailable:
+			return
+		if equal(increment, 0.0):
+			increment = FixPt(0)
+		msg = ControlMsgSetincrement(increment, index)
+		reply = self.controlMsgSyncReply(msg)
+		if not reply.isOK():
+			raise CNCCException("Failed to set increment %f at index %d: %s" %\
+				(increment, index, str(reply)))
 
 	def setDebugging(self, debug):
 		# 0 => disabled, 1 => enabled, 2 => verbose

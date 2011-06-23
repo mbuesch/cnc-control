@@ -123,6 +123,7 @@ enum control_id {
 	CONTROL_FOUPDATE,		/* Feed override update */
 	CONTROL_AXISENABLE,		/* Set the axis-enable mask */
 	CONTROL_ESTOPUPDATE,		/* E-stop status update */
+	CONTROL_SETINCREMENT,		/* Upload an increment definition */
 
 	/* Bootloader messages */
 	CONTROL_ENTERBOOT = 0xA0,	/* Enter the CPU/coprocessor bootloader */
@@ -189,6 +190,10 @@ struct control_message {
 		struct {
 			uint8_t asserted;
 		} __packed estopupdate;
+		struct {
+			fixpt_t increment;
+			uint8_t index;
+		} __packed setincrement;
 
 		/* Bootloader messages */
 		struct {

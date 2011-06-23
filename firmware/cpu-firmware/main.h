@@ -123,6 +123,8 @@ void spindle_state_update(bool on);
 void feed_override_feedback_update(uint8_t percent);
 /* Set the estop feedback state */
 void set_estop_state(bool asserted);
+/* Sets the increment size at index */
+bool set_increment_at_index(uint8_t index, fixpt_t increment);
 
 /* Request an update of the user interface */
 void update_userinterface(void);

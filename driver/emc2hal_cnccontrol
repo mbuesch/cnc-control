@@ -180,6 +180,8 @@ def deviceInitialize(h, cncc):
 	# CNC-Control USB device connected. Initialize it.
 	cncc.setDebugging(0)
 	cncc.setTwohandEnabled(h["config.twohand"])
+	for i in range(0, ControlMsgSetincrement.MAX_INDEX + 1):
+		cncc.setIncrementAtIndex(i, h["jog.increment.%d" % i])
 	axes = map(lambda ax: ax if h["axis.%s.enable" % ax] else "",
 		   ALL_AXES)
 	cncc.setEnabledAxes(filter(None, axes))
@@ -200,6 +202,8 @@ def createPins(h):
 	# Jogging
 	h.newpin("jog.velocity", HAL_FLOAT, HAL_OUT)
 	h.newparam("jog.velocity-rapid", HAL_FLOAT, HAL_RW)
+	for i in range(0, ControlMsgSetincrement.MAX_INDEX + 1):
+		h.newparam("jog.increment.%d" % i, HAL_FLOAT, HAL_RW)
 	for ax in ALL_AXES:
 		h.newpin("jog.%s.minus" % ax, HAL_BIT, HAL_OUT)
 		h.newpin("jog.%s.plus" % ax, HAL_BIT, HAL_OUT)

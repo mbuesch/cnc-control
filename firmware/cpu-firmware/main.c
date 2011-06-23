@@ -58,7 +58,8 @@ enum softkey1_states {
 struct device_state {
 	bool rapid;			/* Rapid-jog on */
 	bool incremental;		/* Incremental-jog on */
-	fixpt_t selected_increment;	/* Selected increment for jog */
+	fixpt_t increments[6];		/* Possible increments (Modified in IRQ context) */
+	uint8_t increment_index;	/* Selected increment for jog (Modified in IRQ context) */
 	uint8_t axis;			/* Selected axis (enum axis_id) (Modified in IRQ context) */
 	uint8_t axis_enable_mask;	/* Enabled axes (Modified in IRQ context) */
 
@@ -98,14 +99,36 @@ jiffies_t jiffies;
 typedef uint16_t extports_t;
 static extports_t extports;
 
-/* The list of possible increment step sizes */
-static fixpt_t PROGMEM increments[] = {
-	FLOAT_TO_FIXPT(0.001),
-	FLOAT_TO_FIXPT(0.01),
-	FLOAT_TO_FIXPT(0.05),
-	FLOAT_TO_FIXPT(0.1),
-};
 
+static uint8_t find_next_increment_index(uint8_t start)
+{
+	uint8_t i, index;
+
+	index = start;
+	for (i = 0; i < ARRAY_SIZE(state.increments); i++) {
+		index++;
+		if (index >= ARRAY_SIZE(state.increments))
+			index = 0;
+		if (state.increments[index] != INT32_TO_FIXPT(0)) {
+			/* Found nonzero. */
+			return index;
+		}
+	}
+
+	return start;
+}
+
+static fixpt_t current_increment(void)
+{
+	fixpt_t ret;
+	uint8_t sreg;
+
+	sreg = irq_disable_save();
+	ret = state.increments[state.increment_index];
+	irq_restore(sreg);
+
+	return ret;
+}
 
 static void select_next_axis(void)
 {
@@ -145,24 +168,6 @@ static void select_previous_axis(void)
 	state.axis = axis;
 
 	irq_restore(sreg);
-}
-
-/* Returns the next bigger increment size */
-static fixpt_t increment_size_up(fixpt_t inc)
-{
-	uint8_t i, next;
-	fixpt_t cur;
-
-	for (i = 0; i < ARRAY_SIZE(increments); i++) {
-		cur = pgm_read(&increments[i]);
-		if (cur == inc)
-			break;
-	}
-	next = i + 1;
-	if (next >= ARRAY_SIZE(increments))
-		next = 0;
-
-	return pgm_read(&increments[next]);
 }
 
 void leds_enable(bool enable)
@@ -392,7 +397,7 @@ static void do_update_lcd(void)
 	switch (state.softkey[1]) {
 	case SK1_INCREMENT:
 		lcd_cursor(0, 10);
-		lcd_printf("i" FIXPT_FMT3, FIXPT_ARG3(state.selected_increment));
+		lcd_printf("i" FIXPT_FMT3, FIXPT_ARG3(current_increment()));
 		break;
 	case SK1_DEVSTATE:
 		lcd_cursor(0, 9);
@@ -536,7 +541,9 @@ static void jog_incremental(int8_t inc_count)
 	if (!inc_count)
 		return;
 
-	irq.jog.increment = state.selected_increment;
+	irq.jog.increment = current_increment();
+	if (irq.jog.increment == INT32_TO_FIXPT(0))
+		return;
 	if (inc_count < 0)
 		irq.jog.increment = fixpt_neg(irq.jog.increment);
 	if (abs(inc_count) > 1) {
@@ -645,11 +652,14 @@ static void halt_motion(void)
 static void interpret_jogwheel(int8_t jogwheel, bool wheel_pressed)
 {
 	fixpt_t mult, increment, velocity;
+	uint8_t sreg;
 
 	if (wheel_pressed) {
 		/* Select bigger INC step. */
-		state.selected_increment = increment_size_up(
-			state.selected_increment);
+		sreg = irq_disable_save();
+		state.increment_index = find_next_increment_index(state.increment_index);
+		irq_restore(sreg);
+		/* Jump to INC state display. */
 		state.softkey[1] = SK1_INCREMENT;
 		update_userinterface();
 		return;
@@ -892,6 +902,19 @@ void set_estop_state(bool asserted)
 	update_userinterface();
 }
 
+/* Called in IRQ context! */
+bool set_increment_at_index(uint8_t index, fixpt_t increment)
+{
+	if (index >= ARRAY_SIZE(state.increments))
+		return 0;
+
+	state.increments[index] = increment;
+	if (state.increments[state.increment_index] == INT32_TO_FIXPT(0))
+		state.increment_index = find_next_increment_index(0);
+
+	return 1;
+}
+
 void update_userinterface(void)
 {
 	mb();
@@ -919,7 +942,6 @@ void reset_device_state(void)
 	uint8_t i;
 
 	memset(&state, 0, sizeof(state));
-	state.selected_increment = FLOAT_TO_FIXPT(0.1);
 	state.axis = AXIS_X;
 	state.jog = JOG_STOPPED;
 	state.jog_velocity = INT32_TO_FIXPT(100);
