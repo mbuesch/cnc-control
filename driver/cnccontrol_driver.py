@@ -58,21 +58,28 @@ class FixPt:
 		if isinstance(val, FixPt):
 			self.raw = val.raw
 			self.floatval = val.floatval
-		elif type(val) == float:
+			return
+		if type(val) == float:
 			raw = (int(val * float(1 << self.FIXPT_FRAC_BITS)) + 1) & 0xFFFFFFFF
-			self.raw = (raw & 0xFF, (raw >> 8) & 0xFF,
-				    (raw >> 16) & 0xFF, (raw >> 24) & 0xFF)
+			self.raw = self.__int2raw(raw)
 			self.floatval = val
-		elif type(val) == int:
-			raw = val << self.FIXPT_FRAC_BITS
-			self.raw = (raw & 0xFF, (raw >> 8) & 0xFF,
-				    (raw >> 16) & 0xFF, (raw >> 24) & 0xFF)
+			return
+		if type(val) == int:
+			self.raw = self.__int2raw(val << self.FIXPT_FRAC_BITS)
 			self.floatval = float(val)
-		else: # 32bit LE two's complement
+			return
+		try: # Try 32bit LE two's complement
 			self.raw = tuple(val)
 			raw = twos32(val[0] | (val[1] << 8) |\
 				     (val[2] << 16) | (val[3] << 24))
 			self.floatval = round(float(raw) / float(1 << self.FIXPT_FRAC_BITS), 4)
+		except (TypeError, IndexError), e:
+			raise CNCCException("FixPt TypeError")
+
+	@staticmethod
+	def __int2raw(val):
+		return (val & 0xFF, (val >> 8) & 0xFF,
+			(val >> 16) & 0xFF, (val >> 24) & 0xFF)
 
 	def __repr__(self):
 		return "0x%02X%02X%02X%02X -> %f" %\
