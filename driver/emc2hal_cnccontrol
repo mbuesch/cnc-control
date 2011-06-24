@@ -253,7 +253,7 @@ def main():
 		try:
 			os.nice(-15)
 		except (OSError), e:
-			print "WARNING: Failed to renice process:", str(e)
+			print "WARNING: Failed to renice cnccontrol HAL module:", str(e)
 		h = hal.component("cnccontrol")
 		createPins(h)
 		cncc = CNCControl(verbose=True)
