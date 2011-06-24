@@ -9,6 +9,7 @@
 """
 
 import sys
+import os
 import time
 from datetime import datetime, timedelta
 import hal
@@ -249,6 +250,10 @@ def eventloop(h, cncc):
 
 def main():
 	try:
+		try:
+			os.nice(-15)
+		except (OSError), e:
+			print "WARNING: Failed to renice process:", str(e)
 		h = hal.component("cnccontrol")
 		createPins(h)
 		cncc = CNCControl(verbose=True)
