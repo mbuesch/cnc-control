@@ -91,90 +91,93 @@ class ValueBalance:
 			self.incBit.startDuty()
 
 def updatePins(ctx):
-	ctx.cncc.setEstopState(ctx.h["machine.estop-active"])
-	if not ctx.h["machine.is-on"] or\
-	   not ctx.cncc.deviceIsTurnedOn():
+	h = ctx.h
+	cncc = ctx.cncc
+
+	cncc.setEstopState(h["machine.estop-active"])
+	if not h["machine.is-on"] or\
+	   not cncc.deviceIsTurnedOn():
 		return
 
 	# Halt the program, if requested
-	if ctx.cncc.haveMotionHaltRequest():
+	if cncc.haveMotionHaltRequest():
 		ctx.programStop.startDuty()
 	ctx.programStop.update()
 
 	# Update master spindle state
-	direction = ctx.cncc.getSpindleCommand()
+	direction = cncc.getSpindleCommand()
 	if direction < 0: # backward
-		ctx.h["spindle.forward"] = 0
-		ctx.h["spindle.reverse"] = 1
-		ctx.h["spindle.stop"] = 0
-		ctx.h["spindle.start"] = 1
+		h["spindle.forward"] = 0
+		h["spindle.reverse"] = 1
+		h["spindle.stop"] = 0
+		h["spindle.start"] = 1
 	elif direction > 0: # forward
-		ctx.h["spindle.forward"] = 1
-		ctx.h["spindle.reverse"] = 0
-		ctx.h["spindle.stop"] = 0
-		ctx.h["spindle.start"] = 1
+		h["spindle.forward"] = 1
+		h["spindle.reverse"] = 0
+		h["spindle.stop"] = 0
+		h["spindle.start"] = 1
 	else: # stop
-		ctx.h["spindle.stop"] = 1
-		ctx.h["spindle.start"] = 0
-		ctx.h["spindle.forward"] = 0
-		ctx.h["spindle.reverse"] = 0
-	if ctx.h["spindle.runs-bwd"]:
-		ctx.cncc.setSpindleState(-1)
-	elif ctx.h["spindle.runs-fwd"]:
-		ctx.cncc.setSpindleState(1)
+		h["spindle.stop"] = 1
+		h["spindle.start"] = 0
+		h["spindle.forward"] = 0
+		h["spindle.reverse"] = 0
+	if h["spindle.runs-bwd"]:
+		cncc.setSpindleState(-1)
+	elif h["spindle.runs-fwd"]:
+		cncc.setSpindleState(1)
 	else:
-		ctx.cncc.setSpindleState(0)
+		cncc.setSpindleState(0)
 
 	# Update feed override state
-	foValue = ctx.cncc.getFeedOverrideState(ctx.h["feed-override.min-value"],
-						ctx.h["feed-override.max-value"])
+	foValue = cncc.getFeedOverrideState(h["feed-override.min-value"],
+					    h["feed-override.max-value"])
 	ctx.foBalance.balance(foValue)
-	ctx.cncc.setFeedOverrideState(ctx.h["feed-override.value"] * 100)
+	cncc.setFeedOverrideState(h["feed-override.value"] * 100)
 
 	# Update jog states
 	velocity = 0.0
 	jogParams = {}
 	for ax in ALL_AXES:
-		if not ctx.h["axis.%s.enable" % ax]:
+		if not h["axis.%s.enable" % ax]:
 			continue
-		(direction, incremental, vel) = ctx.cncc.getJogState(ax)
+		(direction, incremental, vel) = cncc.getJogState(ax)
 		if vel < 0: # Rapid move
-			vel = ctx.h["jog.velocity-rapid"]
+			vel = h["jog.velocity-rapid"]
 		velocity = max(velocity, vel)
 		jogParams[ax] = (direction, incremental)
-	ctx.h["jog.velocity"] = velocity
+	h["jog.velocity"] = velocity
 	for ax in ALL_AXES:
-		if not ctx.h["axis.%s.enable" % ax]:
+		if not h["axis.%s.enable" % ax]:
 			continue
 		ctx.incJogPlus[ax].update()
 		ctx.incJogMinus[ax].update()
 		(direction, incremental) = jogParams[ax]
 		if incremental and abs(direction) > 0.00001:
-			ctx.h["jog.%s.minus" % ax] = 0
-			ctx.h["jog.%s.plus" % ax] = 0
+			h["jog.%s.minus" % ax] = 0
+			h["jog.%s.plus" % ax] = 0
 			if not ctx.incJogPlus[ax].state() and\
 			   not ctx.incJogMinus[ax].state():
-				ctx.h["jog.%s.inc" % ax] = abs(direction)
+				h["jog.%s.inc" % ax] = abs(direction)
 				if direction > 0:
 					ctx.incJogPlus[ax].startDuty()
 				else:
 					ctx.incJogMinus[ax].startDuty()
 		else:
 			if direction < -0.00001: # backward
-				ctx.h["jog.%s.plus" % ax] = 0
-				ctx.h["jog.%s.minus" % ax] = 1
+				h["jog.%s.plus" % ax] = 0
+				h["jog.%s.minus" % ax] = 1
 			elif direction > 0.00001: # forward
-				ctx.h["jog.%s.minus" % ax] = 0
-				ctx.h["jog.%s.plus" % ax] = 1
+				h["jog.%s.minus" % ax] = 0
+				h["jog.%s.plus" % ax] = 1
 			else: # stop
-				ctx.h["jog.%s.minus" % ax] = 0
-				ctx.h["jog.%s.plus" % ax] = 0
+				h["jog.%s.minus" % ax] = 0
+				h["jog.%s.plus" % ax] = 0
 
 	# Update axis states
 	for ax in ALL_AXES:
-		if not ctx.h["axis.%s.enable" % ax]:
+		if not h["axis.%s.enable" % ax]:
 			continue
-		ctx.cncc.setAxisPosition(ax, ctx.h["axis.%s.pos" % ax])
+		cncc.setAxisPosition(ax, h["axis.%s.pos" % ax])
 
 def deviceInitialize(h, cncc):
 	# CNC-Control USB device connected. Initialize it.

@@ -618,7 +618,7 @@ class CNCControl:
 		self.__deviceUnplug()
 		raise CNCCException("USB error: " + str(usbException))
 
-	def eventWait(self, timeout=50):
+	def eventWait(self, timeout=15):
 		if not self.deviceAvailable:
 			return False
 		try:
@@ -631,7 +631,7 @@ class CNCControl:
 		irq = ControlIrq.parseRaw(data)
 		if irq.flags & ControlIrq.IRQ_FLG_TXQOVR:
 			print "CNC Control WARNING: Interrupt queue overflow detected"
-		print irq
+#		print irq
 		if irq.id == ControlIrq.IRQ_JOG:
 			cont = bool(irq.jogFlags & ControlIrqJog.IRQ_JOG_CONTINUOUS)
 			velocity = irq.velocity
