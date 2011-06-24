@@ -135,24 +135,23 @@ def updatePins(ctx):
 	cncc.setFeedOverrideState(h["feed-override.value"] * 100)
 
 	# Update jog states
-	velocity = 0.0
+	velocity = h["jog.velocity-rapid"]
 	jogParams = {}
 	for ax in ALL_AXES:
 		if not h["axis.%s.enable" % ax]:
 			continue
 		(direction, incremental, vel) = cncc.getJogState(ax)
-		if vel < 0: # Rapid move
-			vel = h["jog.velocity-rapid"]
-		velocity = max(velocity, vel)
+		if not equal(direction, 0.0):
+			if vel < 0: # Rapid move
+				vel = h["jog.velocity-rapid"]
+			velocity = min(velocity, vel)
 		jogParams[ax] = (direction, incremental)
 	h["jog.velocity"] = velocity
-	for ax in ALL_AXES:
-		if not h["axis.%s.enable" % ax]:
-			continue
+	for ax in jogParams:
 		ctx.incJogPlus[ax].update()
 		ctx.incJogMinus[ax].update()
 		(direction, incremental) = jogParams[ax]
-		if incremental and abs(direction) > 0.00001:
+		if incremental and not equal(direction, 0.0):
 			h["jog.%s.minus" % ax] = 0
 			h["jog.%s.plus" % ax] = 0
 			if not ctx.incJogPlus[ax].state() and\
