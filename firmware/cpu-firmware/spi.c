@@ -62,9 +62,10 @@ ISR(SPI_STC_vect)
 		else
 			spi_transfer_async();
 	} else {
-		async_state.flags &= ~SPI_ASYNC_RUNNING;
 		SPCR &= ~(1 << SPIE);
 		spi_slave_select(0);
+		mb();
+		async_state.flags &= ~SPI_ASYNC_RUNNING;
 		spi_async_done();
 	}
 }
@@ -72,7 +73,7 @@ ISR(SPI_STC_vect)
 void spi_async_start(void *rxbuf, const void *txbuf,
 		     uint8_t nr_bytes, uint8_t flags, uint8_t wait_ms)
 {
-	BUG_ON(async_state.flags & SPI_ASYNC_RUNNING);
+	BUG_ON(ACCESS_ONCE(async_state.flags) & SPI_ASYNC_RUNNING);
 	BUG_ON(!nr_bytes);
 
 	async_state.flags = flags | SPI_ASYNC_RUNNING;
@@ -81,6 +82,7 @@ void spi_async_start(void *rxbuf, const void *txbuf,
 	async_state.wait_ms_left = 0;
 	async_state.txbuf = txbuf;
 	async_state.rxbuf = rxbuf;
+	mb();
 
 	(void)SPSR; /* clear state */
 	(void)SPDR; /* clear state */
@@ -91,17 +93,19 @@ void spi_async_start(void *rxbuf, const void *txbuf,
 
 bool spi_async_running(void)
 {
-	return !!(async_state.flags & SPI_ASYNC_RUNNING);
+	return !!(ACCESS_ONCE(async_state.flags) & SPI_ASYNC_RUNNING);
 }
 
 void spi_async_ms_tick(void)
 {
 	bool send_next = 0;
 
-	if (!(async_state.flags & SPI_ASYNC_RUNNING))
-		return;
-
 	irq_disable();
+
+	if (!(async_state.flags & SPI_ASYNC_RUNNING)) {
+		irq_enable();
+		return;
+	}
 	if (async_state.wait_ms_left == 0) {
 		irq_enable();
 		return;

@@ -270,13 +270,13 @@ static void trigger_button_state_fetching(void)
 {
 	uint8_t sreg;
 
-	sreg = irq_disable_save();
-	state.button_update_required = 0;
-	irq_restore(sreg);
-
 	BUILD_BUG_ON(sizeof(spi_tx_data) != sizeof(spi_rx_data));
 
 	if (!spi_async_running()) {
+		sreg = irq_disable_save();
+		state.button_update_required = 0;
+		irq_restore(sreg);
+
 		spi_async_start(&spi_rx_data, (const void *)spi_tx_data,
 				ARRAY_SIZE(spi_tx_data),
 				SPI_ASYNC_TXPROGMEM, 1);
@@ -989,9 +989,8 @@ int main(void)
 			spi_async_ms_tick();
 		}
 
-		mb();
-		if (!state.estop) {
-			if (state.button_update_required)
+		if (!ACCESS_ONCE(state.estop)) {
+			if (ACCESS_ONCE(state.button_update_required))
 				trigger_button_state_fetching();
 			interpret_buttons();
 			interpret_feed_override(0);
