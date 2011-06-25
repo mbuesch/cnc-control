@@ -166,7 +166,7 @@ static int8_t rx_raw_message(const void *msg, uint8_t ctl_size,
 					   ctl->devflags.set);
 		update_userinterface();
 
-		init_control_reply(reply, REPLY_VAL16, 0);
+		init_control_reply(reply, REPLY_VAL16, 0, ctl->seqno);
 		reply->val16.value = flags;
 		return CONTROL_REPLY_SIZE(val16);
 	}
@@ -244,7 +244,7 @@ static int8_t rx_raw_message(const void *msg, uint8_t ctl_size,
 		goto err_command;
 	}
 
-	init_control_reply(reply, REPLY_OK, 0);
+	init_control_reply(reply, REPLY_OK, 0, ctl->seqno);
 	return CONTROL_REPLY_SIZE(ok);
 
 err_command:
@@ -261,7 +261,7 @@ err_context:
 	goto error;
 
 error:
-	init_control_reply(reply, REPLY_ERROR, 0);
+	init_control_reply(reply, REPLY_ERROR, 0, ctl->seqno);
 	return CONTROL_REPLY_SIZE(error);
 }
 
@@ -324,10 +324,13 @@ uint8_t usb_app_ep2_tx_poll(void *buffer)
 }
 
 static bool interface_queue_interrupt(const struct control_interrupt *irq,
-				      uint8_t size)
+				      uint8_t size, bool overflowflag)
 {
+	struct control_interrupt *irqbuf;
 	struct tx_queue_entry *e;
 	uint8_t sreg;
+
+	static uint8_t sequence_number;
 
 	BUG_ON(size > sizeof(tx_queue_entry_buffer[0].buffer));
 
@@ -339,8 +342,12 @@ static bool interface_queue_interrupt(const struct control_interrupt *irq,
 	}
 	e = tlist_last_entry(&tx_free, struct tx_queue_entry, list);
 	tlist_move_tail(&e->list, &tx_queued);
-	memcpy(&e->buffer, irq, size);
 	e->size = size;
+	irqbuf = (struct control_interrupt *)(&e->buffer);
+	memcpy(irqbuf, irq, size);
+	if (unlikely(overflowflag))
+		irqbuf->flags |= IRQ_FLG_TXQOVR;
+	irqbuf->seqno = sequence_number++;
 
 	irq_restore(sreg);
 
@@ -382,17 +389,16 @@ static bool interface_drop_one_droppable_irq(void)
 	return dropped;
 }
 
-void send_interrupt(struct control_interrupt *irq, uint8_t size)
+void send_interrupt(const struct control_interrupt *irq,
+		    uint8_t size)
 {
 	bool ok, dropped;
 	uint8_t i;
 
 	while (1) {
 		for (i = 0; i < 10; i++) {
-			if (unlikely(irq_queue_overflow))
-				irq->flags |= IRQ_FLG_TXQOVR;
-
-			ok = interface_queue_interrupt(irq, size);
+			ok = interface_queue_interrupt(irq, size,
+						       irq_queue_overflow);
 			if (likely(ok)) {
 				irq_queue_overflow = 0;
 				return;
@@ -415,7 +421,7 @@ void send_interrupt(struct control_interrupt *irq, uint8_t size)
 	}
 }
 
-void send_interrupt_discard_old(struct control_interrupt *irq,
+void send_interrupt_discard_old(const struct control_interrupt *irq,
 				uint8_t size)
 {
 	interface_discard_irqs_by_id(irq->id);

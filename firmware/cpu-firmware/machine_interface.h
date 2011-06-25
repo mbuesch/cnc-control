@@ -177,6 +177,8 @@ enum spindle_state {
 struct control_message {
 	uint8_t id;
 	uint8_t flags;
+	uint8_t _reserved;
+	uint8_t seqno;
 
 	int _header_end[0];
 
@@ -268,6 +270,8 @@ enum reply_error {
 struct control_reply {
 	uint8_t id;
 	uint8_t flags;
+	uint8_t _reserved;
+	uint8_t seqno;
 
 	int _header_end[0];
 
@@ -289,10 +293,12 @@ struct control_reply {
 #define CONTROL_REPLY_MAX_SIZE		sizeof(struct control_reply)
 
 static inline void init_control_reply(struct control_reply *reply,
-				      uint8_t id, uint8_t flags)
+				      uint8_t id, uint8_t flags, uint8_t seqno)
 {
 	reply->id = id;
 	reply->flags = flags;
+	reply->_reserved = 0;
+	reply->seqno = seqno;
 }
 
 enum interrupt_id {
@@ -319,6 +325,8 @@ enum jogirq_flags {
 struct control_interrupt {
 	uint8_t id;
 	uint8_t flags;
+	uint8_t _reserved;
+	uint8_t seqno;
 
 	int _header_end[0];
 
@@ -358,13 +366,13 @@ struct control_interrupt {
 /** send_interrupt - Send an interrupt to the host.
  * This is the API for sending an interrupt.
  */
-void send_interrupt(struct control_interrupt *irq,
+void send_interrupt(const struct control_interrupt *irq,
 		    uint8_t size);
 
 /** send_interrupt_discard_old - Send an interrupt to the host.
  * Also discard already queued IRQs of the same type.
  */
-void send_interrupt_discard_old(struct control_interrupt *irq,
+void send_interrupt_discard_old(const struct control_interrupt *irq,
 				uint8_t size);
 
 /** get_active_devflags - Get device flags atomically.

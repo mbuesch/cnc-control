@@ -118,20 +118,28 @@ class ControlMsg:
 	TARGET_CPU			= 0
 	TARGET_COPROC			= 1
 
-	def __init__(self, id, flags):
+	def __init__(self, id, flags, seqno):
 		self.id = id
 		self.flags = flags
+		self.reserved = 0
+		self.seqno = seqno
+
+	def setSeqno(self, seqno):
+		self.seqno = seqno
 
 	def getRaw(self):
-		return [self.id & 0xFF, self.flags & 0xFF]
+		return [self.id & 0xFF, self.flags & 0xFF,
+			self.reserved & 0xFF, self.seqno & 0xFF]
 
 class ControlMsgPing(ControlMsg):
-	def __init__(self, hdrFlags=0):
-		ControlMsg.__init__(self, ControlMsg.CONTROL_PING, hdrFlags)
+	def __init__(self, hdrFlags=0, hdrSeqno=0):
+		ControlMsg.__init__(self, ControlMsg.CONTROL_PING,
+				    hdrFlags, hdrSeqno)
 
 class ControlMsgReset(ControlMsg):
-	def __init__(self, hdrFlags=0):
-		ControlMsg.__init__(self, ControlMsg.CONTROL_RESET, hdrFlags)
+	def __init__(self, hdrFlags=0, hdrSeqno=0):
+		ControlMsg.__init__(self, ControlMsg.CONTROL_RESET,
+				    hdrFlags, hdrSeqno)
 
 class ControlMsgDevflags(ControlMsg):
 	DEVICE_FLG_NODEBUG	= (1 << 0)
@@ -139,8 +147,9 @@ class ControlMsgDevflags(ControlMsg):
 	DEVICE_FLG_ON		= (1 << 2)
 	DEVICE_FLG_TWOHANDEN	= (1 << 3)
 
-	def __init__(self, devFlagsMask, devFlagsSet, hdrFlags=0):
-		ControlMsg.__init__(self, ControlMsg.CONTROL_DEVFLAGS, hdrFlags)
+	def __init__(self, devFlagsMask, devFlagsSet, hdrFlags=0, hdrSeqno=0):
+		ControlMsg.__init__(self, ControlMsg.CONTROL_DEVFLAGS,
+				    hdrFlags, hdrSeqno)
 		self.devFlagsMask = devFlagsMask
 		self.devFlagsSet = devFlagsSet
 
@@ -151,8 +160,9 @@ class ControlMsgDevflags(ControlMsg):
 		return raw
 
 class ControlMsgAxisupdate(ControlMsg):
-	def __init__(self, pos, axis, hdrFlags=0):
-		ControlMsg.__init__(self, ControlMsg.CONTROL_AXISUPDATE, hdrFlags)
+	def __init__(self, pos, axis, hdrFlags=0, hdrSeqno=0):
+		ControlMsg.__init__(self, ControlMsg.CONTROL_AXISUPDATE,
+				    hdrFlags, hdrSeqno)
 		self.pos = FixPt(pos)
 		self.axis = AXIS2NUMBER[axis]
 
@@ -167,8 +177,9 @@ class ControlMsgSpindleupdate(ControlMsg):
 	SPINDLE_CW		= 1
 	SPINDLE_CCW		= 2
 
-	def __init__(self, state, hdrFlags=0):
-		ControlMsg.__init__(self, ControlMsg.CONTROL_SPINDLEUPDATE, hdrFlags)
+	def __init__(self, state, hdrFlags=0, hdrSeqno=0):
+		ControlMsg.__init__(self, ControlMsg.CONTROL_SPINDLEUPDATE,
+				    hdrFlags, hdrSeqno)
 		self.state = state
 
 	def getRaw(self):
@@ -177,8 +188,9 @@ class ControlMsgSpindleupdate(ControlMsg):
 		return raw
 
 class ControlMsgFoupdate(ControlMsg):
-	def __init__(self, percent, hdrFlags=0):
-		ControlMsg.__init__(self, ControlMsg.CONTROL_FOUPDATE, hdrFlags)
+	def __init__(self, percent, hdrFlags=0, hdrSeqno=0):
+		ControlMsg.__init__(self, ControlMsg.CONTROL_FOUPDATE,
+				    hdrFlags, hdrSeqno)
 		self.percent = percent
 
 	def getRaw(self):
@@ -187,8 +199,9 @@ class ControlMsgFoupdate(ControlMsg):
 		return raw
 
 class ControlMsgAxisenable(ControlMsg):
-	def __init__(self, mask, hdrFlags=0):
-		ControlMsg.__init__(self, ControlMsg.CONTROL_AXISENABLE, hdrFlags)
+	def __init__(self, mask, hdrFlags=0, hdrSeqno=0):
+		ControlMsg.__init__(self, ControlMsg.CONTROL_AXISENABLE,
+				    hdrFlags, hdrSeqno)
 		self.mask = mask
 
 	def getRaw(self):
@@ -197,8 +210,9 @@ class ControlMsgAxisenable(ControlMsg):
 		return raw
 
 class ControlMsgEstopupdate(ControlMsg):
-	def __init__(self, asserted, hdrFlags=0):
-		ControlMsg.__init__(self, ControlMsg.CONTROL_ESTOPUPDATE, hdrFlags)
+	def __init__(self, asserted, hdrFlags=0, hdrSeqno=0):
+		ControlMsg.__init__(self, ControlMsg.CONTROL_ESTOPUPDATE,
+				    hdrFlags, hdrSeqno)
 		self.asserted = 1 if asserted else 0
 
 	def getRaw(self):
@@ -209,8 +223,9 @@ class ControlMsgEstopupdate(ControlMsg):
 class ControlMsgSetincrement(ControlMsg):
 	MAX_INDEX = 5
 
-	def __init__(self, increment, index, hdrFlags=0):
-		ControlMsg.__init__(self, ControlMsg.CONTROL_SETINCREMENT, hdrFlags)
+	def __init__(self, increment, index, hdrFlags=0, hdrSeqno=0):
+		ControlMsg.__init__(self, ControlMsg.CONTROL_SETINCREMENT,
+				    hdrFlags, hdrSeqno)
 		self.increment = FixPt(increment)
 		self.index = index
 
@@ -224,8 +239,9 @@ class ControlMsgEnterboot(ControlMsg):
 	ENTERBOOT_MAGIC0		= 0xB0
 	ENTERBOOT_MAGIC1		= 0x07
 
-	def __init__(self, target, hdrFlags=0):
-		ControlMsg.__init__(self, ControlMsg.CONTROL_ENTERBOOT, hdrFlags)
+	def __init__(self, target, hdrFlags=0, hdrSeqno=0):
+		ControlMsg.__init__(self, ControlMsg.CONTROL_ENTERBOOT,
+				    hdrFlags, hdrSeqno)
 		self.magic = (
 			ControlMsgEnterboot.ENTERBOOT_MAGIC0,
 			ControlMsgEnterboot.ENTERBOOT_MAGIC1,
@@ -239,8 +255,10 @@ class ControlMsgEnterboot(ControlMsg):
 		return raw
 
 class ControlMsgExitboot(ControlMsg):
-	def __init__(self, target, hdrFlags=ControlMsg.CONTROL_FLG_BOOTLOADER):
-		ControlMsg.__init__(self, ControlMsg.CONTROL_EXITBOOT, hdrFlags)
+	def __init__(self, target,
+		     hdrFlags=ControlMsg.CONTROL_FLG_BOOTLOADER, hdrSeqno=0):
+		ControlMsg.__init__(self, ControlMsg.CONTROL_EXITBOOT,
+				    hdrFlags, hdrSeqno)
 		self.target = target
 
 	def getRaw(self):
@@ -252,8 +270,9 @@ class ControlMsgBootWritebuf(ControlMsg):
 	DATA_MAX_BYTES = 32
 
 	def __init__(self, offset, data,
-		     hdrFlags=ControlMsg.CONTROL_FLG_BOOTLOADER):
-		ControlMsg.__init__(self, ControlMsg.CONTROL_BOOT_WRITEBUF, hdrFlags)
+		     hdrFlags=ControlMsg.CONTROL_FLG_BOOTLOADER, hdrSeqno=0):
+		ControlMsg.__init__(self, ControlMsg.CONTROL_BOOT_WRITEBUF,
+				    hdrFlags, hdrSeqno)
 		self.offset = offset
 		self.size = len(data)
 		self.crc = crc8Buf(0, data) ^ 0xFF
@@ -274,8 +293,9 @@ class ControlMsgBootWritebuf(ControlMsg):
 
 class ControlMsgBootFlashpg(ControlMsg):
 	def __init__(self, address, target,
-		     hdrFlags=ControlMsg.CONTROL_FLG_BOOTLOADER):
-		ControlMsg.__init__(self, ControlMsg.CONTROL_BOOT_FLASHPG, hdrFlags)
+		     hdrFlags=ControlMsg.CONTROL_FLG_BOOTLOADER, hdrSeqno=0):
+		ControlMsg.__init__(self, ControlMsg.CONTROL_BOOT_FLASHPG,
+				    hdrFlags, hdrSeqno)
 		self.address = address
 		self.target = target
 
@@ -286,28 +306,35 @@ class ControlMsgBootFlashpg(ControlMsg):
 		return raw
 
 class ControlReply:
-	MAX_SIZE		= 37
+	MAX_SIZE		= 6
 
 	# IDs
 	REPLY_OK		= 0
 	REPLY_ERROR		= 1
 	REPLY_VAL16		= 2
 
-	def __init__(self, id, flags):
+	def __init__(self, id, flags, seqno):
 		self.id = id
 		self.flags = flags
+		self.reserved = 0
+		self.seqno = seqno
 
 	@staticmethod
 	def parseRaw(raw):
 		try:
 			id = raw[0]
 			flags = raw[1]
+			#reserved = raw[2]
+			seqno = raw[3]
+			raw = raw[4:]
 			if id == ControlReply.REPLY_OK:
-				return ControlReplyOk(hdrFlags=flags)
+				return ControlReplyOk(hdrFlags=flags, hdrSeqno=seqno)
 			elif id == ControlReply.REPLY_ERROR:
-				return ControlReplyError(raw[2], hdrFlags=flags)
+				return ControlReplyError(raw[0],
+							 hdrFlags=flags, hdrSeqno=seqno)
 			elif id == ControlReply.REPLY_VAL16:
-				return ControlReplyVal16(raw[2] | (raw[3] << 8), hdrFlags=flags)
+				return ControlReplyVal16(raw[0] | (raw[1] << 8),
+							 hdrFlags=flags, hdrSeqno=seqno)
 			else:
 				CNCCException("Unknown ControlReply ID: %d" % id)
 		except (IndexError, KeyError):
@@ -320,8 +347,9 @@ class ControlReply:
 		return False
 
 class ControlReplyOk(ControlReply):
-	def __init__(self, hdrFlags=0):
-		ControlReply.__init__(self, ControlReply.REPLY_OK, hdrFlags)
+	def __init__(self, hdrFlags=0, hdrSeqno=0):
+		ControlReply.__init__(self, ControlReply.REPLY_OK,
+				      hdrFlags, hdrSeqno)
 
 	def __repr__(self):
 		return "Ok"
@@ -341,8 +369,9 @@ class ControlReplyError(ControlReply):
 	CTLERR_CHECKSUM		= 7
 	CTLERR_CMDFAIL		= 8
 
-	def __init__(self, code, hdrFlags=0):
-		ControlReply.__init__(self, ControlReply.REPLY_ERROR, hdrFlags)
+	def __init__(self, code, hdrFlags=0, hdrSeqno=0):
+		ControlReply.__init__(self, ControlReply.REPLY_ERROR,
+				      hdrFlags, hdrSeqno)
 		self.code = code
 
 	def __repr__(self):
@@ -363,8 +392,9 @@ class ControlReplyError(ControlReply):
 			return "Unknown error"
 
 class ControlReplyVal16(ControlReply):
-	def __init__(self, value, hdrFlags=0):
-		ControlReply.__init__(self, ControlReply.REPLY_VAL16, hdrFlags)
+	def __init__(self, value, hdrFlags=0, hdrSeqno=0):
+		ControlReply.__init__(self, ControlReply.REPLY_VAL16,
+				      hdrFlags, hdrSeqno)
 		self.value = value
 
 	def __repr__(self):
@@ -374,7 +404,7 @@ class ControlReplyVal16(ControlReply):
 		return True
 
 class ControlIrq:
-	MAX_SIZE		= 12
+	MAX_SIZE		= 14
 
 	# IDs
 	IRQ_JOG			= 0
@@ -389,28 +419,36 @@ class ControlIrq:
 	IRQ_FLG_PRIO		= (1 << 1)
 	IRQ_FLG_DROPPABLE	= (1 << 2)
 
-	def __init__(self, id, flags):
+	def __init__(self, id, flags, seqno):
 		self.id = id
 		self.flags = flags
+		self.reserved = 0
+		self.seqno = seqno
 
 	@staticmethod
 	def parseRaw(raw):
 		try:
 			id = raw[0]
 			flags = raw[1]
+			#reserved = raw[2]
+			seqno = raw[3]
+			raw = raw[4:]
 			if id == ControlIrq.IRQ_JOG:
-				return ControlIrqJog(raw[2:6], raw[6:10], raw[10], raw[11],
-						     hdrFlags=flags)
+				return ControlIrqJog(raw[0:4], raw[4:8], raw[8], raw[9],
+						     hdrFlags=flags, hdrSeqno=seqno)
 			elif id == ControlIrq.IRQ_JOG_KEEPALIFE:
-				return ControlIrqJogKeepalife(hdrFlags=flags)
+				return ControlIrqJogKeepalife(hdrFlags=flags, hdrSeqno=seqno)
 			elif id == ControlIrq.IRQ_SPINDLE:
-				return ControlIrqSpindle(raw[2], hdrFlags=flags)
+				return ControlIrqSpindle(raw[0],
+							 hdrFlags=flags, hdrSeqno=seqno)
 			elif id == ControlIrq.IRQ_FEEDOVERRIDE:
-				return ControlIrqFeedoverride(raw[2], hdrFlags=flags)
+				return ControlIrqFeedoverride(raw[0],
+							      hdrFlags=flags, hdrSeqno=seqno)
 			elif id == ControlIrq.IRQ_DEVFLAGS:
-				return ControlIrqDevflags(raw[2:4], hdrFlags=flags)
+				return ControlIrqDevflags(raw[0:2],
+							  hdrFlags=flags, hdrSeqno=seqno)
 			elif id == ControlIrq.IRQ_HALT:
-				return ControlIrqHalt(hdrFlags=flags)
+				return ControlIrqHalt(hdrFlags=flags, hdrSeqno=seqno)
 			else:
 				raise CNCCException("Unknown ControlIrq ID: %d" % id)
 		except (IndexError, KeyError):
@@ -423,8 +461,10 @@ class ControlIrqJog(ControlIrq):
 	IRQ_JOG_CONTINUOUS	= (1 << 0)
 	IRQ_JOG_RAPID		= (1 << 1)
 
-	def __init__(self, increment, velocity, axis, flags, hdrFlags=0):
-		ControlIrq.__init__(self, ControlIrq.IRQ_JOG, hdrFlags)
+	def __init__(self, increment, velocity, axis, flags,
+		     hdrFlags=0, hdrSeqno=0):
+		ControlIrq.__init__(self, ControlIrq.IRQ_JOG,
+				    hdrFlags, hdrSeqno)
 		self.increment = FixPt(increment)
 		self.velocity = FixPt(velocity)
 		self.axis = NUMBER2AXIS[axis]
@@ -435,39 +475,44 @@ class ControlIrqJog(ControlIrq):
 			(str(self.increment), str(self.velocity), self.axis, self.jogFlags)
 
 class ControlIrqJogKeepalife(ControlIrq):
-	def __init__(self, hdrFlags=0):
-		ControlIrq.__init__(self, ControlIrq.IRQ_JOG_KEEPALIFE, hdrFlags)
+	def __init__(self, hdrFlags=0, hdrSeqno=0):
+		ControlIrq.__init__(self, ControlIrq.IRQ_JOG_KEEPALIFE,
+				    hdrFlags, hdrSeqno)
 
 	def __repr__(self):
 		return "JOG KEEPALIFE interrupt"
 
 class ControlIrqSpindle(ControlIrq):
-	def __init__(self, state, hdrFlags=0):
-		ControlIrq.__init__(self, ControlIrq.IRQ_SPINDLE, hdrFlags)
+	def __init__(self, state, hdrFlags=0, hdrSeqno=0):
+		ControlIrq.__init__(self, ControlIrq.IRQ_SPINDLE,
+				    hdrFlags, hdrSeqno)
 		self.state = state
 
 	def __repr__(self):
 		return "SPINDLE interrupt: %d" % (self.state)
 
 class ControlIrqFeedoverride(ControlIrq):
-	def __init__(self, state, hdrFlags=0):
-		ControlIrq.__init__(self, ControlIrq.IRQ_FEEDOVERRIDE, hdrFlags)
+	def __init__(self, state, hdrFlags=0, hdrSeqno=0):
+		ControlIrq.__init__(self, ControlIrq.IRQ_FEEDOVERRIDE,
+				    hdrFlags, hdrSeqno)
 		self.state = state
 
 	def __repr__(self):
 		return "FEEDOVERRIDE interrupt: %d" % (self.state)
 
 class ControlIrqDevflags(ControlIrq):
-	def __init__(self, devFlags, hdrFlags=0):
-		ControlIrq.__init__(self, ControlIrq.IRQ_DEVFLAGS, hdrFlags)
+	def __init__(self, devFlags, hdrFlags=0, hdrSeqno=0):
+		ControlIrq.__init__(self, ControlIrq.IRQ_DEVFLAGS,
+				    hdrFlags, hdrSeqno)
 		self.devFlags = devFlags[0] | (devFlags[1] << 8)
 
 	def __repr__(self):
 		return "DEVFLAGS interrupt: %04X" % (self.devFlags)
 
 class ControlIrqHalt(ControlIrq):
-	def __init__(self, hdrFlags=0):
-		ControlIrq.__init__(self, ControlIrq.IRQ_HALT, hdrFlags)
+	def __init__(self, hdrFlags=0, hdrSeqno=0):
+		ControlIrq.__init__(self, ControlIrq.IRQ_HALT,
+				    hdrFlags, hdrSeqno)
 
 	def __repr__(self):
 		return "HALT interrupt"
@@ -587,6 +632,7 @@ class CNCControl:
 		return False
 
 	def __initializeData(self):
+		self.messageSequenceNumber = 0
 		self.deviceIsOn = False
 		self.estop = False
 		self.motionHaltRequest = False
@@ -675,6 +721,9 @@ class CNCControl:
 
 	def controlMsg(self, msg, timeout=300):
 		try:
+			msg.setSeqno(self.messageSequenceNumber)
+			self.messageSequenceNumber += 1
+
 			rawData = msg.getRaw()
 			size = self.usbh.bulkWrite(EP_OUT, rawData, timeout)
 			if len(rawData) != size:
@@ -692,7 +741,11 @@ class CNCControl:
 
 	def controlMsgSyncReply(self, msg, timeout=300):
 		self.controlMsg(msg, timeout)
-		return self.controlReply(timeout)
+		reply = self.controlReply(timeout)
+		if msg.seqno != reply.seqno:
+			raise CNCCException("Got invalid reply sequence number: %d vs %d" %\
+				(msg.seqno, reply.seqno))
+		return reply
 
 	def setTwohandEnabled(self, enable):
 		if not self.deviceAvailable:

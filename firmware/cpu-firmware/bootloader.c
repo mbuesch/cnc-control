@@ -408,8 +408,7 @@ uint8_t usb_app_ep2_rx(uint8_t *data, uint8_t ctl_size,
 		goto err_command;
 	}
 
-	reply->id = REPLY_OK;
-	reply->flags = 0;
+	init_control_reply(reply, REPLY_OK, 0, ctl->seqno);
 	return CONTROL_REPLY_SIZE(ok);
 
 err_context:
@@ -432,8 +431,7 @@ err_checksum:
 	goto error;
 
 error:
-	reply->id = REPLY_ERROR;
-	reply->flags = 0;
+	init_control_reply(reply, REPLY_ERROR, 0, ctl->seqno);
 	return CONTROL_REPLY_SIZE(error);
 }
 
