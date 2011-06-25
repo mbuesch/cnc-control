@@ -109,7 +109,6 @@ enum axis_id {
 	AXIS_C,
 
 	NR_AXIS,
-	AXIS_INVALID = NR_AXIS,
 };
 
 static inline uint8_t axis_is_angular(enum axis_id id)

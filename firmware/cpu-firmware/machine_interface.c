@@ -176,7 +176,7 @@ static int8_t rx_raw_message(const void *msg, uint8_t ctl_size,
 		if (ctl_size < CONTROL_MSG_SIZE(axisupdate))
 			goto err_size;
 
-		if (ctl->axisupdate.axis >= AXIS_INVALID)
+		if (ctl->axisupdate.axis >= NR_AXIS)
 			goto err_inval;
 		axis_pos_update(ctl->axisupdate.axis, ctl->axisupdate.pos);
 		break;
