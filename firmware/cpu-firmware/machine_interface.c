@@ -40,6 +40,7 @@ static struct tiny_list tx_queued;
 static struct tiny_list tx_inflight;
 static struct tiny_list tx_free;
 static bool irq_queue_overflow;
+static uint8_t irq_sequence_number;
 
 
 uint16_t active_devflags;
@@ -63,6 +64,7 @@ void usb_app_reset(void)
 	}
 
 	irq_queue_overflow = 0;
+	irq_sequence_number = 0;
 
 	irq_restore(sreg);
 }
@@ -330,8 +332,6 @@ static bool interface_queue_interrupt(const struct control_interrupt *irq,
 	struct tx_queue_entry *e;
 	uint8_t sreg;
 
-	static uint8_t sequence_number;
-
 	BUG_ON(size > sizeof(tx_queue_entry_buffer[0].buffer));
 
 	sreg = irq_disable_save();
@@ -347,7 +347,7 @@ static bool interface_queue_interrupt(const struct control_interrupt *irq,
 	memcpy(irqbuf, irq, size);
 	if (unlikely(overflowflag))
 		irqbuf->flags |= IRQ_FLG_TXQOVR;
-	irqbuf->seqno = sequence_number++;
+	irqbuf->seqno = irq_sequence_number++;
 
 	irq_restore(sreg);
 
