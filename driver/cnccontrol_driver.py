@@ -485,6 +485,7 @@ class JogState:
 		if not equal(direction.floatval, 0.0):
 			if datetime.now() > self.__timeout:
 				print "WARNING: Jog keepalife timer expired."
+				self.reset()
 				return self.STOPDATA
 		return (direction, incremental, velocity)
 

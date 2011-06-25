@@ -523,7 +523,7 @@ static void interpret_softkeys(bool sk0, bool sk1)
 
 static void set_jog_keepalife_deadline(void)
 {
-	state.next_jog_keepalife = get_jiffies() + msec2jiffies(200);
+	state.next_jog_keepalife = get_jiffies() + msec2jiffies(100);
 }
 
 static void jog_incremental(int8_t inc_count)
