@@ -723,7 +723,7 @@ class CNCControl:
 	def controlMsg(self, msg, timeout=300):
 		try:
 			msg.setSeqno(self.messageSequenceNumber)
-			self.messageSequenceNumber += 1
+			self.messageSequenceNumber = (self.messageSequenceNumber + 1) & 0xFF
 
 			rawData = msg.getRaw()
 			size = self.usbh.bulkWrite(EP_OUT, rawData, timeout)
