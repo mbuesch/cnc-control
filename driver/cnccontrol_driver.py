@@ -471,8 +471,9 @@ class ControlIrqJog(ControlIrq):
 		self.jogFlags = flags
 
 	def __repr__(self):
-		return "JOG interrupt: %s, %s, %s, 0x%X" %\
-			(str(self.increment), str(self.velocity), self.axis, self.jogFlags)
+		return "JOG interrupt (nr%d): %s, %s, %s, 0x%X" %\
+			(self.seqno, str(self.increment),
+			 str(self.velocity), self.axis, self.jogFlags)
 
 class ControlIrqJogKeepalife(ControlIrq):
 	def __init__(self, hdrFlags=0, hdrSeqno=0):
@@ -480,7 +481,7 @@ class ControlIrqJogKeepalife(ControlIrq):
 				    hdrFlags, hdrSeqno)
 
 	def __repr__(self):
-		return "JOG KEEPALIFE interrupt"
+		return "JOG KEEPALIFE interrupt (nr%d)" % (self.seqno)
 
 class ControlIrqSpindle(ControlIrq):
 	def __init__(self, state, hdrFlags=0, hdrSeqno=0):
@@ -489,7 +490,7 @@ class ControlIrqSpindle(ControlIrq):
 		self.state = state
 
 	def __repr__(self):
-		return "SPINDLE interrupt: %d" % (self.state)
+		return "SPINDLE interrupt (nr%d): %d" % (self.seqno, self.state)
 
 class ControlIrqFeedoverride(ControlIrq):
 	def __init__(self, state, hdrFlags=0, hdrSeqno=0):
@@ -498,7 +499,7 @@ class ControlIrqFeedoverride(ControlIrq):
 		self.state = state
 
 	def __repr__(self):
-		return "FEEDOVERRIDE interrupt: %d" % (self.state)
+		return "FEEDOVERRIDE interrupt (nr%d): %d" % (self.seqno, self.state)
 
 class ControlIrqDevflags(ControlIrq):
 	def __init__(self, devFlags, hdrFlags=0, hdrSeqno=0):
@@ -507,7 +508,7 @@ class ControlIrqDevflags(ControlIrq):
 		self.devFlags = devFlags[0] | (devFlags[1] << 8)
 
 	def __repr__(self):
-		return "DEVFLAGS interrupt: %04X" % (self.devFlags)
+		return "DEVFLAGS interrupt (nr%d): %04X" % (self.seqno, self.devFlags)
 
 class ControlIrqHalt(ControlIrq):
 	def __init__(self, hdrFlags=0, hdrSeqno=0):
@@ -515,7 +516,7 @@ class ControlIrqHalt(ControlIrq):
 				    hdrFlags, hdrSeqno)
 
 	def __repr__(self):
-		return "HALT interrupt"
+		return "HALT interrupt (nr%d)" % (self.seqno)
 
 class JogState:
 	KEEPALIFE_TIMEOUT = 0.3
