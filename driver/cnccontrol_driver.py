@@ -474,16 +474,19 @@ class ControlIrqHalt(ControlIrq):
 
 class JogState:
 	KEEPALIFE_TIMEOUT = 0.3
+	STOPDATA = (FixPt(0.0), False, FixPt(0.0))
 
 	def __init__(self):
 		self.reset()
 
 	def get(self):
-		if datetime.now() > self.__timeout:
-			return (FixPt(0.0), False, FixPt(0.0))
-		return (self.__direction,
-			self.__incremental,
-			self.__velocity)
+		direction, incremental, velocity =\
+			self.__direction, self.__incremental, self.__velocity
+		if not equal(direction.floatval, 0.0):
+			if datetime.now() > self.__timeout:
+				print "WARNING: Jog keepalife timer expired."
+				return self.STOPDATA
+		return (direction, incremental, velocity)
 
 	def set(self, direction, incremental, velocity):
 		self.__direction, self.__incremental, self.__velocity =\
@@ -491,7 +494,7 @@ class JogState:
 		self.keepAlife()
 
 	def reset(self):
-		self.set(FixPt(0.0), False, FixPt(0.0))
+		self.set(self.STOPDATA[0], self.STOPDATA[1], self.STOPDATA[2])
 
 	def keepAlife(self):
 		self.__timeout = datetime.now() +\
