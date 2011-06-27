@@ -1,8 +1,8 @@
 #ifndef DEBUG_INTERFACE_H_
 #define DEBUG_INTERFACE_H_
 
+#include "machine_interface_internal.h"
 #include "util.h"
-#include "machine_interface.h"
 
 #include <avr/pgmspace.h>
 
@@ -33,5 +33,15 @@ static inline bool debug_verbose(void)
 	return unlikely(devflag_is_set(DEVICE_FLG_VERBOSEDBG));
 }
 
+
+/** debug_ringbuf_count -- Get an approximate count of bytes
+ * currently in the ring buffer. */
+uint8_t debug_ringbuf_count(void);
+
+/** debug_ringbuf_get - Get bytes from the ringbuffer.
+ * @buf: Target buffer
+ * @size: Target buffer size
+ * Returns the number of bytes copied to the target buffer. */
+uint8_t debug_ringbuf_get(void *buf, uint8_t size);
 
 #endif /* DEBUG_INTERFACE_H_ */

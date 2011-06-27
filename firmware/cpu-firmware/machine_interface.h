@@ -307,6 +307,7 @@ enum interrupt_id {
 	IRQ_FEEDOVERRIDE,	/* Change the feed override */
 	IRQ_DEVFLAGS,		/* Device flags changed. */
 	IRQ_HALT,		/* Halt motion */
+	IRQ_LOGMSG,		/* Log message */
 };
 
 enum control_irq_flags {
@@ -349,6 +350,9 @@ struct control_interrupt {
 		} __packed devflags;
 		struct {
 		} __packed halt;
+		struct {
+			uint8_t msg[10];
+		} __packed logmsg;
 	} __packed;
 } __packed;
 
@@ -357,65 +361,4 @@ struct control_interrupt {
 #define CONTROL_IRQ_HDR_SIZE		CONTROL_IRQ_SIZE(_header_end)
 #define CONTROL_IRQ_MAX_SIZE		sizeof(struct control_interrupt)
 
-
-#ifdef __EMBEDDED__
-
-#include "util.h"
-
-/** send_interrupt - Send an interrupt to the host.
- * This is the API for sending an interrupt.
- */
-void send_interrupt(const struct control_interrupt *irq,
-		    uint8_t size);
-
-/** send_interrupt_discard_old - Send an interrupt to the host.
- * Also discard already queued IRQs of the same type.
- */
-void send_interrupt_discard_old(const struct control_interrupt *irq,
-				uint8_t size);
-
-/** get_active_devflags - Get device flags atomically.
- */
-uint16_t get_active_devflags(void);
-
-static inline uint8_t get_active_devflags_low(void)
-{
-	extern uint16_t active_devflags;
-	mb();
-	return lo8(active_devflags); /* atomic on AVR */
-}
-static inline uint8_t get_active_devflags_high(void)
-{
-	extern uint16_t active_devflags;
-	mb();
-	return hi8(active_devflags); /* atomic on AVR */
-}
-/** devflag_is_set - Flag test optimized for constant mask.
- * Inefficient for non-const mask! */
-static inline bool devflag_is_set(const uint16_t mask)
-{
-	bool res;
-
-	if (mask == 0)
-		res = 0;
-	else if (hi8(mask) == 0)
-		res = !!(get_active_devflags_low() & lo8(mask));
-	else if (lo8(mask) == 0)
-		res = !!(get_active_devflags_high() & hi8(mask));
-	else
-		res = !!(get_active_devflags() & mask);
-
-	return res;
-}
-
-/** modify_devflags - Modify device flags atomically
- * and send notification interrupt to the host.
- */
-void modify_devflags(uint16_t mask, uint16_t set);
-
-/** reset_devflags - Reset device flags to defaults */
-void reset_devflags(void);
-
-
-#endif /* __EMBEDDED__ */
 #endif /* MACHINE_INTERFACE_H_ */

@@ -413,6 +413,7 @@ class ControlIrq:
 	IRQ_FEEDOVERRIDE	= 3
 	IRQ_DEVFLAGS		= 4
 	IRQ_HALT		= 5
+	IRQ_LOGMSG		= 6
 
 	# Flags
 	IRQ_FLG_TXQOVR		= (1 << 0)
@@ -449,6 +450,9 @@ class ControlIrq:
 							  hdrFlags=flags, hdrSeqno=seqno)
 			elif id == ControlIrq.IRQ_HALT:
 				return ControlIrqHalt(hdrFlags=flags, hdrSeqno=seqno)
+			elif id == ControlIrq.IRQ_LOGMSG:
+				return ControlIrqLogmsg(raw[0:10],
+							hdrFlags=flags, hdrSeqno=seqno)
 			else:
 				raise CNCCException("Unknown ControlIrq ID: %d" % id)
 		except (IndexError, KeyError):
@@ -517,6 +521,16 @@ class ControlIrqHalt(ControlIrq):
 
 	def __repr__(self):
 		return "HALT interrupt (nr%d)" % (self.seqno)
+
+class ControlIrqLogmsg(ControlIrq):
+	def __init__(self, msg, hdrFlags=0, hdrSeqno=0):
+		ControlIrq.__init__(self, ControlIrq.IRQ_LOGMSG,
+				    hdrFlags, hdrSeqno)
+		self.msg = "".join(map(lambda c: c if type(c) == str else chr(c),
+				       msg))
+
+	def __repr__(self):
+		return "LOGMSG interrupt (nr%d)" % (self.seqno)
 
 class JogState:
 	KEEPALIFE_TIMEOUT = 0.3
@@ -716,6 +730,8 @@ class CNCControl:
 			for jogState in self.jogStates.values():
 				jogState.reset()
 			self.spindleCommand = 0
+		elif irq.id == ControlIrq.IRQ_LOGMSG:
+			print irq.msg#TODO
 		else:
 			print "Unhandled IRQ:", irq
 		return True

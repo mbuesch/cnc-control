@@ -35,12 +35,41 @@
 
 #define BIT(nr)			(1ull << (nr))
 
+
 /* Memory barrier.
  * The CPU doesn't have runtime reordering, so we just
  * need a compiler memory clobber. */
 #define mb()			__asm__ __volatile__("" : : : "memory")
 
 #define ACCESS_ONCE(x)		(*(volatile typeof(x) *)&(x))
+
+/* Atomic 8bit load and store.
+ * On AVR 8bit loads and stores are always atomic. However, use
+ * ACCESS_ONCE() to suppress compiler optimization. */
+#define ATOMIC_LOAD8(u8var)		ACCESS_ONCE(u8var)
+#define ATOMIC_STORE8(u8var, newval)	do { ACCESS_ONCE(u8var) = newval; } while (0)
+
+/* Generic atomic load and store helpers. */
+#define ATOMIC_LOAD(var)		({		\
+		typeof(var) _retval = 0;		\
+		if (sizeof(_retval) == 1)		\
+			_retval = ATOMIC_LOAD8(var);	\
+		else					\
+			_ATOMIC_LOAD_invalid_size();	\
+		_retval;				\
+	})
+
+#define ATOMIC_STORE(var, newval)	do {		\
+		typeof(var) _dummyvar;			\
+		if (sizeof(_dummyvar) == 1)		\
+			ATOMIC_STORE8(var, newval);	\
+		else					\
+			_ATOMIC_STORE_invalid_size();	\
+	} while (0)
+
+extern void _ATOMIC_LOAD_invalid_size(void); /* Linker error helper */
+extern void _ATOMIC_STORE_invalid_size(void); /* Linker error helper */
+
 
 /* Convert something indirectly to a string */
 #define __stringify(x)		#x

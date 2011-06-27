@@ -73,7 +73,7 @@ ISR(SPI_STC_vect)
 void spi_async_start(void *rxbuf, const void *txbuf,
 		     uint8_t nr_bytes, uint8_t flags, uint8_t wait_ms)
 {
-	BUG_ON(ACCESS_ONCE(async_state.flags) & SPI_ASYNC_RUNNING);
+	BUG_ON(ATOMIC_LOAD(async_state.flags) & SPI_ASYNC_RUNNING);
 	BUG_ON(!nr_bytes);
 
 	async_state.flags = flags | SPI_ASYNC_RUNNING;
@@ -93,7 +93,7 @@ void spi_async_start(void *rxbuf, const void *txbuf,
 
 bool spi_async_running(void)
 {
-	return !!(ACCESS_ONCE(async_state.flags) & SPI_ASYNC_RUNNING);
+	return !!(ATOMIC_LOAD(async_state.flags) & SPI_ASYNC_RUNNING);
 }
 
 void spi_async_ms_tick(void)

@@ -12,7 +12,7 @@
 
 
 #include "util.h"
-#include "machine_interface.h"
+#include "machine_interface_internal.h"
 
 #include <stdint.h>
 

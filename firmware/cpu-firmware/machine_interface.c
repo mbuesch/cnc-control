@@ -14,7 +14,7 @@
  *   GNU General Public License for more details.
  */
 
-#include "machine_interface.h"
+#include "machine_interface_internal.h"
 #include "usb.h"
 #include "usb_application.h"
 #include "util.h"
@@ -35,16 +35,41 @@ struct tx_queue_entry {
 	struct tiny_list list;
 };
 
-static struct tx_queue_entry tx_queue_entry_buffer[16];
+static struct tx_queue_entry tx_queue_entry_buffer[INTERRUPT_QUEUE_MAX_LEN];
 static struct tiny_list tx_queued;
 static struct tiny_list tx_inflight;
 static struct tiny_list tx_free;
+static uint8_t tx_free_count;
 static bool irq_queue_overflow;
 static uint8_t irq_sequence_number;
 
 
 uint16_t active_devflags;
 
+
+uint8_t interrupt_queue_freecount(void)
+{
+	return ATOMIC_LOAD(tx_free_count);
+}
+
+static void tqentry_free(struct tx_queue_entry *e)
+{
+	tlist_move_tail(&e->list, &tx_free);
+	tx_free_count++;
+}
+
+static struct tx_queue_entry * tqentry_alloc(void)
+{
+	struct tx_queue_entry *e;
+
+	if (tlist_is_empty(&tx_free))
+		return NULL;
+	e = tlist_last_entry(&tx_free, struct tx_queue_entry, list);
+	tlist_move_tail(&e->list, &tx_queued);
+	tx_free_count--;
+
+	return e;
+}
 
 void usb_app_reset(void)
 {
@@ -62,6 +87,7 @@ void usb_app_reset(void)
 		e = &tx_queue_entry_buffer[i];
 		tlist_add_tail(&e->list, &tx_free);
 	}
+	tx_free_count = ARRAY_SIZE(tx_queue_entry_buffer);
 
 	irq_queue_overflow = 0;
 	irq_sequence_number = 0;
@@ -304,7 +330,7 @@ uint8_t usb_app_ep1_tx_poll(void *buffer)
 	sreg = irq_disable_save();
 
 	tlist_for_each_delsafe(e, tmp_e, &tx_inflight, list)
-		tlist_move_tail(&e->list, &tx_free);
+		tqentry_free(e);
 
 	if (!tlist_is_empty(&tx_queued)) {
 		e = tlist_first_entry(&tx_queued, struct tx_queue_entry, list);
@@ -326,7 +352,8 @@ uint8_t usb_app_ep2_tx_poll(void *buffer)
 }
 
 static bool interface_queue_interrupt(const struct control_interrupt *irq,
-				      uint8_t size, bool overflowflag)
+				      uint8_t size, bool overflowflag,
+				      uint8_t seqno)
 {
 	struct control_interrupt *irqbuf;
 	struct tx_queue_entry *e;
@@ -336,18 +363,15 @@ static bool interface_queue_interrupt(const struct control_interrupt *irq,
 
 	sreg = irq_disable_save();
 
-	if (tlist_is_empty(&tx_free)) {
-		irq_restore(sreg);
+	e = tqentry_alloc();
+	if (!e)
 		return 0;
-	}
-	e = tlist_last_entry(&tx_free, struct tx_queue_entry, list);
-	tlist_move_tail(&e->list, &tx_queued);
 	e->size = size;
 	irqbuf = (struct control_interrupt *)(&e->buffer);
 	memcpy(irqbuf, irq, size);
 	if (unlikely(overflowflag))
 		irqbuf->flags |= IRQ_FLG_TXQOVR;
-	irqbuf->seqno = irq_sequence_number++;
+	irqbuf->seqno = seqno;
 
 	irq_restore(sreg);
 
@@ -363,7 +387,7 @@ static void interface_discard_irqs_by_id(uint8_t irq_id)
 	tlist_for_each_delsafe(e, tmp_e, &tx_queued, list) {
 		if (e->buffer.id == irq_id) {
 			/* Dequeue and discard it. */
-			tlist_move_tail(&e->list, &tx_free);
+			tqentry_free(e);
 		}
 	}
 	irq_restore(sreg);
@@ -376,10 +400,10 @@ static bool interface_drop_one_droppable_irq(void)
 	bool dropped = 0;
 
 	sreg = irq_disable_save();
-	tlist_for_each(e, &tx_queued, list) { /* not delsafe */
+	tlist_for_each(e, &tx_queued, list) { /* not delsafe. Fine. */
 		if (e->buffer.flags & IRQ_FLG_DROPPABLE) {
 			/* Dequeue and discard it. */
-			tlist_move_tail(&e->list, &tx_free);
+			tqentry_free(e);
 			dropped = 1;
 			break;
 		}
@@ -393,12 +417,17 @@ void send_interrupt(const struct control_interrupt *irq,
 		    uint8_t size)
 {
 	bool ok, dropped;
-	uint8_t i;
+	uint8_t i, sreg, seqno;
+
+	sreg = irq_disable_save();
+	seqno = irq_sequence_number++;
+	irq_restore(sreg);
 
 	while (1) {
-		for (i = 0; i < 10; i++) {
+		for (i = 0; i < 5; i++) {
 			ok = interface_queue_interrupt(irq, size,
-						       irq_queue_overflow);
+						       irq_queue_overflow,
+						       seqno);
 			if (likely(ok)) {
 				irq_queue_overflow = 0;
 				return;

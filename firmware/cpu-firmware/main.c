@@ -21,7 +21,6 @@
 #include "override.h"
 #include "4094.h"
 #include "pdiusb.h"
-#include "machine_interface.h"
 #include "spi.h"
 
 #include <avr/io.h>
@@ -245,7 +244,7 @@ static void coprocessor_init(void)
 
 ISR(SPI_MASTER_TRANSIRQ_VECT)
 {
-	state.button_update_required = 1;
+	ATOMIC_STORE(state.button_update_required, 1);
 }
 
 struct spi_rx_data {
@@ -268,14 +267,10 @@ static const uint8_t PROGMEM spi_tx_data[] = {
 
 static void trigger_button_state_fetching(void)
 {
-	uint8_t sreg;
-
 	BUILD_BUG_ON(sizeof(spi_tx_data) != sizeof(spi_rx_data));
 
 	if (!spi_async_running()) {
-		sreg = irq_disable_save();
-		state.button_update_required = 0;
-		irq_restore(sreg);
+		ATOMIC_STORE(state.button_update_required, 0);
 
 		spi_async_start(&spi_rx_data, (const void *)spi_tx_data,
 				ARRAY_SIZE(spi_tx_data),
@@ -360,7 +355,7 @@ static void do_update_lcd(void)
 	uint8_t sreg;
 	uint16_t devflags = get_active_devflags();
 
-	if (state.estop) {
+	if (ATOMIC_LOAD(state.estop)) {
 		lcd_cursor(0, 2);
 		lcd_put_pstr("ESTOP ACTIVE");
 		return;
@@ -892,8 +887,7 @@ void feed_override_feedback_update(uint8_t percent)
 /* Called in IRQ context! */
 void set_estop_state(bool asserted)
 {
-	state.estop = asserted;
-	mb();
+	ATOMIC_STORE(state.estop, asserted);
 	update_userinterface();
 }
 
@@ -930,6 +924,25 @@ static void systimer_init(void)
 	TCCR1B = (1 << CS11) | (1 << WGM12);
 	OCR1A = 2000;
 	TIMSK |= (1 << OCIE1A);
+}
+
+static void handle_debug_ringbuffer(void)
+{
+	struct control_interrupt irq = {
+		.id		= IRQ_LOGMSG,
+		.flags		= IRQ_FLG_DROPPABLE,
+	};
+	uint8_t count;
+
+	while (debug_ringbuf_count() &&
+	       interrupt_queue_freecount() >= INTERRUPT_QUEUE_MAX_LEN / 2) {
+		memset(irq.logmsg.msg, 0, sizeof(irq.logmsg.msg));
+		count = debug_ringbuf_get(irq.logmsg.msg,
+					  sizeof(irq.logmsg.msg));
+		if (!count)
+			break;
+		send_interrupt(&irq, CONTROL_IRQ_SIZE(logmsg));
+	}
 }
 
 void reset_device_state(void)
@@ -989,8 +1002,8 @@ int main(void)
 			spi_async_ms_tick();
 		}
 
-		if (!ACCESS_ONCE(state.estop)) {
-			if (ACCESS_ONCE(state.button_update_required))
+		if (!ATOMIC_LOAD(state.estop)) {
+			if (ATOMIC_LOAD(state.button_update_required))
 				trigger_button_state_fetching();
 			interpret_buttons();
 			interpret_feed_override(0);
@@ -1014,6 +1027,8 @@ int main(void)
 			if (leds)
 				update_leds();
 		}
+
+		handle_debug_ringbuffer();
 
 		wdt_reset();
 	}
