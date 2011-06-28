@@ -7,7 +7,8 @@ loadusr -Wn cnccontrol emc2hal_cnccontrol
 
 
 # --- Device config ---
-setp	cnccontrol.config.twohand			1	# "two-hand" button enabled?
+setp	cnccontrol.config.twohand			1 # "two-hand" button enabled?
+setp	cnccontrol.config.debug				0 # Device debugging
 
 # --- Machine state ---
 net	cncc-on		halui.machine.is-on		=> cnccontrol.machine.is-on
