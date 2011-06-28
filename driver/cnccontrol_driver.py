@@ -660,6 +660,7 @@ class CNCControl:
 		self.spindleCommand = 0
 		self.spindleState = 0
 		self.feedOverridePercent = 0
+		self.logMsgBuf = ""
 
 	@staticmethod
 	def __findDevice(idVendor, idProduct):
@@ -731,7 +732,12 @@ class CNCControl:
 				jogState.reset()
 			self.spindleCommand = 0
 		elif irq.id == ControlIrq.IRQ_LOGMSG:
-			print irq.msg#TODO
+			msg = self.logMsgBuf + irq.msg
+			msg = msg.split('\n')
+			while len(msg) > 1:
+				print "[dev debug]:", msg[0]
+				msg = msg[1:]
+			self.logMsgBuf = msg[0]
 		else:
 			print "Unhandled IRQ:", irq
 		return True
