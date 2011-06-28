@@ -181,7 +181,7 @@ def updatePins(ctx):
 
 def deviceInitialize(h, cncc):
 	# CNC-Control USB device connected. Initialize it.
-	cncc.setDebugging(h["config.debug"])
+	cncc.setDebugging(h["config.debug"], h["config.usblogmsg"])
 	cncc.setTwohandEnabled(h["config.twohand"])
 	for i in range(0, ControlMsgSetincrement.MAX_INDEX + 1):
 		cncc.setIncrementAtIndex(i, h["jog.increment.%d" % i])
@@ -192,7 +192,8 @@ def deviceInitialize(h, cncc):
 def createPins(h):
 	# Device config
 	h.newparam("config.twohand", HAL_BIT, HAL_RW)
-	h.newparam("config.debug", HAL_BIT, HAL_RW)
+	h.newparam("config.debug", HAL_U32, HAL_RW)
+	h.newparam("config.usblogmsg", HAL_BIT, HAL_RW)
 
 	# Machine state
 	h.newpin("machine.is-on", HAL_BIT, HAL_IN)

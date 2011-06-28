@@ -154,6 +154,7 @@ enum device_flags {
 	DEVICE_FLG_VERBOSEDBG	= (1ul << 1), /* Verbose debugging */
 	DEVICE_FLG_ON		= (1ul << 2), /* The CNC Control device is turned on */
 	DEVICE_FLG_TWOHANDEN	= (1ul << 3), /* Twohand switch enabled */
+	DEVICE_FLG_USBLOGMSG	= (1ul << 4), /* Send debug messages through USB */
 };
 
 enum enterboot_magic {

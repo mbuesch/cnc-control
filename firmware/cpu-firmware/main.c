@@ -1028,7 +1028,8 @@ int main(void)
 				update_leds();
 		}
 
-		handle_debug_ringbuffer();
+		if (devflag_is_set(DEVICE_FLG_USBLOGMSG))
+			handle_debug_ringbuffer();
 
 		wdt_reset();
 	}

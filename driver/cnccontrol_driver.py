@@ -146,6 +146,7 @@ class ControlMsgDevflags(ControlMsg):
 	DEVICE_FLG_VERBOSEDBG	= (1 << 1)
 	DEVICE_FLG_ON		= (1 << 2)
 	DEVICE_FLG_TWOHANDEN	= (1 << 3)
+	DEVICE_FLG_USBLOGMSG	= (1 << 4)
 
 	def __init__(self, devFlagsMask, devFlagsSet, hdrFlags=0, hdrSeqno=0):
 		ControlMsg.__init__(self, ControlMsg.CONTROL_DEVFLAGS,
@@ -792,17 +793,20 @@ class CNCControl:
 			raise CNCCException("Failed to set increment %f at index %d: %s" %\
 				(increment, index, str(reply)))
 
-	def setDebugging(self, debug):
+	def setDebugging(self, debugLevel, usbMessages):
 		# 0 => disabled, 1 => enabled, 2 => verbose
 		if not self.deviceAvailable:
 			return
 		flg = ControlMsgDevflags.DEVICE_FLG_NODEBUG
-		if debug >= 1:
+		if debugLevel >= 1:
 			flg &= ~ControlMsgDevflags.DEVICE_FLG_NODEBUG
-		if debug >= 2:
+		if debugLevel >= 2:
 			flg |= ControlMsgDevflags.DEVICE_FLG_VERBOSEDBG
+		if usbMessages:
+			flg |= ControlMsgDevflags.DEVICE_FLG_USBLOGMSG
 		msg = ControlMsgDevflags(ControlMsgDevflags.DEVICE_FLG_NODEBUG |
-					 ControlMsgDevflags.DEVICE_FLG_VERBOSEDBG,
+					 ControlMsgDevflags.DEVICE_FLG_VERBOSEDBG |
+					 ControlMsgDevflags.DEVICE_FLG_USBLOGMSG,
 					 flg)
 		reply = self.controlMsgSyncReply(msg)
 		if not reply.isOK():

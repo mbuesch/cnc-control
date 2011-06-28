@@ -51,11 +51,12 @@ uint8_t debug_ringbuf_get(void *buf, uint8_t size)
 	return count;
 }
 
-static void debug_putchar(char c)
+static void debug_ringbuf_putchar(char c)
 {
 	uint8_t sreg;
 
-	uart_putchar(c);
+	if (!devflag_is_set(DEVICE_FLG_USBLOGMSG))
+		return;
 
 	sreg = irq_disable_save();
 	if (dbg_ringbuf_used < ARRAY_SIZE(dbg_ringbuf)) {
@@ -66,6 +67,12 @@ static void debug_putchar(char c)
 		dbg_ringbuf_used++;
 	}
 	irq_restore(sreg);
+}
+
+static void debug_putchar(char c)
+{
+	uart_putchar(c);
+	debug_ringbuf_putchar(c);
 }
 
 static int debug_stream_putchar(char c, FILE *stream)
