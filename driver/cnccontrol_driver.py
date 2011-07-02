@@ -653,9 +653,13 @@ class CNCControl:
 		self.estop = False
 		self.motionHaltRequest = False
 		self.axisPositions = { }
+		self.axisPosUpdatePending = { }
+		self.lastAxisPosUpdate = { }
 		self.jogStates = { }
 		for ax in ALL_AXES:
 			self.axisPositions[ax] = FixPt(0.0)
+			self.axisPosUpdatePending[ax] = False
+			self.lastAxisPosUpdate[ax] = datetime(1970, 1, 1)
 			self.jogStates[ax] = JogState()
 		self.foState = 0
 		self.spindleCommand = 0
@@ -884,13 +888,19 @@ class CNCControl:
 		if not self.deviceAvailable:
 			return
 		pos = FixPt(position)
-		if pos == self.axisPositions[axis]:
-			return # No change
-		msg = ControlMsgAxisupdate(pos, axis)
-		reply = self.controlMsgSyncReply(msg)
-		if not reply.isOK():
-			raise CNCCException("Axis update failed: %s" % str(reply))
-		self.axisPositions[axis] = pos
+		if pos != self.axisPositions[axis]:
+			self.axisPositions[axis] = pos
+			self.axisPosUpdatePending[axis] = True
+		if self.axisPosUpdatePending[axis]:
+			now = datetime.now()
+			if now < self.lastAxisPosUpdate[axis] + timedelta(seconds=0.1):
+				return # Not yet
+			msg = ControlMsgAxisupdate(pos, axis)
+			reply = self.controlMsgSyncReply(msg)
+			if not reply.isOK():
+				raise CNCCException("Axis update failed: %s" % str(reply))
+			self.axisPosUpdatePending[axis] = False
+			self.lastAxisPosUpdate[axis] = now
 
 	def setEnabledAxes(self, axes):
 		# Set the enabled axes.
