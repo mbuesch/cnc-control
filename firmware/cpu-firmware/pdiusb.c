@@ -255,22 +255,22 @@ static void pdiusb_write_buffer(const uint8_t *buf, uint8_t size)
 
 static void stall_ep(uint8_t ep_out_index)
 {
-	DBG(usb_printstr("PDIUSB: Stalling EP", ep_out_index, "and EP",
-			 PDIUSB_OUT2IN(ep_out_index)));
+	DBG(usb_print2num("PDIUSB: Stalling EP", ep_out_index, "and EP",
+			  PDIUSB_EPIDX_IN(ep_out_index)));
 
 	pdiusb_command_w8(PDIUSB_CMD_SEPSTAT(ep_out_index),
 			  PDIUSB_SEPSTAT_STALL);
-	pdiusb_command_w8(PDIUSB_CMD_SEPSTAT(PDIUSB_OUT2IN(ep_out_index)),
+	pdiusb_command_w8(PDIUSB_CMD_SEPSTAT(PDIUSB_EPIDX_IN(ep_out_index)),
 			  PDIUSB_SEPSTAT_STALL);
 }
 
 static void unstall_ep(uint8_t ep_out_index)
 {
-	DBG(usb_printstr("PDIUSB: Unstalling EP", ep_out_index, "and EP",
-			 PDIUSB_OUT2IN(ep_out_index)));
+	DBG(usb_print2num("PDIUSB: Unstalling EP", ep_out_index, "and EP",
+			  PDIUSB_EPIDX_IN(ep_out_index)));
 
 	pdiusb_command_w8(PDIUSB_CMD_SEPSTAT(ep_out_index), 0);
-	pdiusb_command_w8(PDIUSB_CMD_SEPSTAT(PDIUSB_OUT2IN(ep_out_index)), 0);
+	pdiusb_command_w8(PDIUSB_CMD_SEPSTAT(PDIUSB_EPIDX_IN(ep_out_index)), 0);
 }
 
 static uint8_t ep_is_stalled(uint8_t ep_out_index)
@@ -278,7 +278,7 @@ static uint8_t ep_is_stalled(uint8_t ep_out_index)
 	uint8_t stat;
 
 	stat = pdiusb_command_r8(PDIUSB_CMD_GEPSTAT(ep_out_index));
-	stat |= pdiusb_command_r8(PDIUSB_CMD_GEPSTAT(PDIUSB_OUT2IN(ep_out_index)));
+	stat |= pdiusb_command_r8(PDIUSB_CMD_GEPSTAT(PDIUSB_EPIDX_IN(ep_out_index)));
 
 	return (stat & PDIUSB_GEPSTAT_STALL);
 }
@@ -300,7 +300,7 @@ static trans_stat_t handle_irq_ep_out(uint8_t ep_index)
 	pdiusb_select_ep(PDIUSB_CMD_SELEP(ep_index));
 	size = pdiusb_read_buffer(pdiusb_buffer, sizeof(pdiusb_buffer));
 	if (status & PDIUSB_TRSTAT_SETUP) {
-		pdiusb_select_ep(PDIUSB_CMD_SELEP(PDIUSB_OUT2IN(ep_index)));
+		pdiusb_select_ep(PDIUSB_CMD_SELEP(PDIUSB_EPIDX_IN(ep_index)));
 		pdiusb_command(PDIUSB_CMD_ACKSETUP);
 		pdiusb_select_ep(PDIUSB_CMD_SELEP(ep_index));
 		pdiusb_command(PDIUSB_CMD_ACKSETUP);
@@ -314,7 +314,7 @@ static bool handle_irq_ep_in(uint8_t ep_index)
 {
 	uint8_t status;
 
-	DBG(usb_print1num("PDIUSB: IN irq on EP", ep_index));
+//	DBG(usb_print1num("PDIUSB: IN irq on EP", ep_index));
 
 	status = pdiusb_command_r8(PDIUSB_CMD_TRSTAT(ep_index));
 	if (!(status & PDIUSB_TRSTAT_TRANSOK)) {
@@ -322,7 +322,7 @@ static bool handle_irq_ep_in(uint8_t ep_index)
 		if (status != PDIUSB_TRERR_NOERR && status != PDIUSB_TRERR_NAK) {
 			usb_print2num("PDIUSB: trans on EP", ep_index, "failed with",
 				      status);
-			stall_ep(PDIUSB_IN2OUT(ep_index));
+			stall_ep(PDIUSB_EPIDX_OUT(ep_index));
 			return 0;
 		}
 	}

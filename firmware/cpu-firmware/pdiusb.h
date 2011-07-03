@@ -12,8 +12,8 @@ enum pdiusb_ep_index {
 	PDIUSB_EP_EP2OUT,
 	PDIUSB_EP_EP2IN,
 };
-#define PDIUSB_OUT2IN(out_ep)		((out_ep) + 1)
-#define PDIUSB_IN2OUT(in_ep)		((in_ep) - 1)
+#define PDIUSB_EPIDX_OUT(ep_index)	((ep_index) & 0xFE)
+#define PDIUSB_EPIDX_IN(ep_index)	((ep_index) | 0x01)
 
 
 /* PDIUSBD12 commands */
