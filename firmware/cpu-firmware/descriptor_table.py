@@ -31,7 +31,7 @@ ep1in = Endpoint(interface0)
 ep1in.set("bEndpointAddress",		1 | USB_ENDPOINT_IN)
 ep1in.set("bmAttributes",		USB_ENDPOINT_XFER_INT)
 ep1in.set("wMaxPacketSize",		16)
-ep1in.set("bInterval",			1)
+ep1in.set("bInterval",			20)
 
 ep2in = Endpoint(interface0)
 ep2in.set("bEndpointAddress",		2 | USB_ENDPOINT_IN)

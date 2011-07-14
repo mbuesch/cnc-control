@@ -214,11 +214,6 @@ static uint16_t pdiusb_command_r16(uint8_t command)
 	return (a | (b << 8));
 }
 
-static inline uint8_t pdiusb_select_ep(uint8_t ep)
-{
-	return pdiusb_command_r8(ep);
-}
-
 static uint8_t pdiusb_read_buffer(uint8_t *buf, uint8_t max_size)
 {
 	uint8_t i, data_size;
@@ -297,12 +292,12 @@ static trans_stat_t handle_irq_ep_out(uint8_t ep_index)
 			return TRANS_STAT(0, 0);
 		}
 	}
-	pdiusb_select_ep(PDIUSB_CMD_SELEP(ep_index));
+	pdiusb_command(PDIUSB_CMD_SELEP(ep_index));
 	size = pdiusb_read_buffer(pdiusb_buffer, sizeof(pdiusb_buffer));
 	if (status & PDIUSB_TRSTAT_SETUP) {
-		pdiusb_select_ep(PDIUSB_CMD_SELEP(PDIUSB_EPIDX_IN(ep_index)));
+		pdiusb_command(PDIUSB_CMD_SELEP(PDIUSB_EPIDX_IN(ep_index)));
 		pdiusb_command(PDIUSB_CMD_ACKSETUP);
-		pdiusb_select_ep(PDIUSB_CMD_SELEP(ep_index));
+		pdiusb_command(PDIUSB_CMD_SELEP(ep_index));
 		pdiusb_command(PDIUSB_CMD_ACKSETUP);
 	}
 	pdiusb_command(PDIUSB_CMD_CLRBUF);
@@ -327,12 +322,19 @@ static bool handle_irq_ep_in(uint8_t ep_index)
 		}
 	}
 
+	/* For non-doublebuffered EPs, check if the buffer is ready. */
+	if (ep_index != PDIUSB_EP_EP2IN) {
+		status = pdiusb_command_r8(PDIUSB_CMD_SELEP(ep_index));
+		if (status & PDIUSB_SELEPR_FULL)
+			return 0; /* Not yet */
+	}
+
 	return 1;
 }
 
 static void ep_queue_data(uint8_t ep_index, void *data, uint8_t size)
 {
-	pdiusb_select_ep(PDIUSB_CMD_SELEP(ep_index));
+	pdiusb_command(PDIUSB_CMD_SELEP(ep_index));
 	pdiusb_write_buffer(data, size);
 	pdiusb_command(PDIUSB_CMD_VALBUF);
 }
