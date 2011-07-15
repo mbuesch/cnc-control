@@ -157,7 +157,7 @@ static uint8_t usb_control_endpoint_rx(struct usb_ctrl *ctl)
 		usb_control_buf[0] = 0;
 		usb_control_buf[1] = 0;
 		usb_control_len = 2;
-		if (usb_endpoint_is_stalled(index & ~0x80))
+		if (usb_endpoint_is_stalled(index))
 			usb_control_buf[0] |= (1 << USB_ENDPOINT_HALT);
 		break;
 	}
@@ -169,7 +169,7 @@ static uint8_t usb_control_endpoint_rx(struct usb_ctrl *ctl)
 				  "on", index));
 
 		if (feature & (1 << USB_ENDPOINT_HALT))
-			usb_unstall_endpoint(index & ~0x80);
+			usb_unstall_endpoint(index);
 		break;
 	}
 	case USB_REQ_SET_FEATURE: {
@@ -180,7 +180,7 @@ static uint8_t usb_control_endpoint_rx(struct usb_ctrl *ctl)
 				  "on", index));
 
 		if (feature & (1 << USB_ENDPOINT_HALT))
-			usb_stall_endpoint(index & ~0x80);
+			usb_stall_endpoint(index);
 		break;
 	}
 	default:

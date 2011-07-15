@@ -203,6 +203,15 @@ struct usb_ctrl {
 #define USB_ENDPOINT_IN			0x80
 #define USB_ENDPOINT_OUT		0x00
 
+static inline uint8_t usb_ep_is_in(uint8_t ep)
+{
+	return ep & USB_ENDPOINT_IN;
+}
+static inline uint8_t usb_ep_is_out(uint8_t ep)
+{
+	return !(ep & USB_ENDPOINT_IN);
+}
+
 static inline uint8_t usb_ctrl_is_in(const struct usb_ctrl *ctrl)
 {
 	return (ctrl->bRequestType & USB_ENDPOINT_IN);

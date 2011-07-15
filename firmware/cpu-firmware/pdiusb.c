@@ -221,7 +221,7 @@ static uint8_t pdiusb_read_buffer(uint8_t *buf, uint8_t max_size)
 	pdiusb_command(PDIUSB_CMD_RWBUF);
 	pdiusb_read(); /* Read the reserved byte */
 	data_size = pdiusb_read();
-	if (unlikely(data_size > max_size)) {
+	if (data_size > max_size) {
 		usb_print1num("PDIUSB: RX buffer overrun", data_size);
 		return 0;
 	}
@@ -248,34 +248,25 @@ static void pdiusb_write_buffer(const uint8_t *buf, uint8_t size)
 		pdiusb_write(buf[i]);
 }
 
-static void stall_ep(uint8_t ep_out_index)
+static void stall_ep(uint8_t ep_index)
 {
-	DBG(usb_print2num("PDIUSB: Stalling EP", ep_out_index, "and EP",
-			  PDIUSB_EPIDX_IN(ep_out_index)));
+	DBG(usb_print1num("PDIUSB: Stalling EP index", ep_index));
 
-	pdiusb_command_w8(PDIUSB_CMD_SEPSTAT(ep_out_index),
-			  PDIUSB_SEPSTAT_STALL);
-	pdiusb_command_w8(PDIUSB_CMD_SEPSTAT(PDIUSB_EPIDX_IN(ep_out_index)),
+	pdiusb_command_w8(PDIUSB_CMD_SEPSTAT(ep_index),
 			  PDIUSB_SEPSTAT_STALL);
 }
 
-static void unstall_ep(uint8_t ep_out_index)
+static void unstall_ep(uint8_t ep_index)
 {
-	DBG(usb_print2num("PDIUSB: Unstalling EP", ep_out_index, "and EP",
-			  PDIUSB_EPIDX_IN(ep_out_index)));
+	DBG(usb_print1num("PDIUSB: Unstalling EP index", ep_index));
 
-	pdiusb_command_w8(PDIUSB_CMD_SEPSTAT(ep_out_index), 0);
-	pdiusb_command_w8(PDIUSB_CMD_SEPSTAT(PDIUSB_EPIDX_IN(ep_out_index)), 0);
+	pdiusb_command_w8(PDIUSB_CMD_SEPSTAT(ep_index), 0);
 }
 
-static uint8_t ep_is_stalled(uint8_t ep_out_index)
+static uint8_t ep_is_stalled(uint8_t ep_index)
 {
-	uint8_t stat;
-
-	stat = pdiusb_command_r8(PDIUSB_CMD_GEPSTAT(ep_out_index));
-	stat |= pdiusb_command_r8(PDIUSB_CMD_GEPSTAT(PDIUSB_EPIDX_IN(ep_out_index)));
-
-	return (stat & PDIUSB_GEPSTAT_STALL);
+	return (pdiusb_command_r8(PDIUSB_CMD_GEPSTAT(ep_index))
+		& PDIUSB_GEPSTAT_STALL);
 }
 
 static trans_stat_t handle_irq_ep_out(uint8_t ep_index)
@@ -317,7 +308,6 @@ static bool handle_irq_ep_in(uint8_t ep_index)
 		if (status != PDIUSB_TRERR_NOERR && status != PDIUSB_TRERR_NAK) {
 			usb_print2num("PDIUSB: trans on EP", ep_index, "failed with",
 				      status);
-			stall_ep(PDIUSB_EPIDX_OUT(ep_index));
 			return 0;
 		}
 	}
@@ -587,16 +577,19 @@ uint8_t pdiusb_init(void)
 	mdelay(50);
 	/* Enable software USB pullup */
 	pdiusb_set_mode(PDIUSB_MODE_SOFTCONN);
+
 	unstall_ep(PDIUSB_EP_CTLOUT);
+	unstall_ep(PDIUSB_EP_CTLIN);
 
 	return 0;
 }
 
 void pdiusb_exit(void)
 {
-	stall_ep(PDIUSB_EP_CTLOUT);
-	stall_ep(PDIUSB_EP_EP1OUT);
-	stall_ep(PDIUSB_EP_EP2OUT);
+	uint8_t ep_index;
+
+	for (ep_index = 0; ep_index < PDIUSB_EP_COUNT; ep_index++)
+		stall_ep(ep_index);
 	usb_set_address(0);
 	pdiusb_set_mode(0); /* Disconnect SOFTCONN */
 	mdelay(500); /* Wait for host to handle disconnect */
@@ -621,74 +614,70 @@ void usb_enable_endpoints(uint8_t enable)
 		pdiusb_command_w8(PDIUSB_CMD_ENDPEN, PDIUSB_GENISOEN);
 }
 
-void usb_stall_endpoint(uint8_t ep)
+static uint8_t pdiusb_ep_addr_to_ep_index(uint8_t ep)
 {
-	DBG(usb_print1num("PDIUSB: Stalling EP", ep));
+	uint8_t ep_index;
 
-	switch (ep) {
+	switch (ep & ~0x80) {
 	case 0:
-		stall_ep(PDIUSB_EP_CTLOUT);
+		ep_index = PDIUSB_EP_CTLOUT;
 		break;
 #if USB_WITH_EP1
 	case 1:
-		stall_ep(PDIUSB_EP_EP1OUT);
+		ep_index = PDIUSB_EP_EP1OUT;
 		break;
 #endif
 #if USB_WITH_EP2
 	case 2:
-		stall_ep(PDIUSB_EP_EP2OUT);
+		ep_index = PDIUSB_EP_EP2OUT;
 		break;
 #endif
 	default:
-		usb_print1num("PDIUSB: stall-EP unknown EP", ep);
+		return 0xFF;
 	}
+	if (usb_ep_is_in(ep))
+		ep_index = PDIUSB_EPIDX_IN(ep_index);
+
+	return ep_index;
+}
+
+void usb_stall_endpoint(uint8_t ep)
+{
+	uint8_t ep_index;
+
+	DBG(usb_print1num("PDIUSB: Stalling EP", ep));
+
+	ep_index = pdiusb_ep_addr_to_ep_index(ep);
+	if (ep_index == 0xFF) {
+		usb_print1num("PDIUSB: stall-EP unknown EP", ep);
+		return;
+	}
+	stall_ep(ep_index);
 }
 
 void usb_unstall_endpoint(uint8_t ep)
 {
+	uint8_t ep_index;
+
 	DBG(usb_print1num("PDIUSB: Unstalling EP", ep));
 
-	switch (ep) {
-	case 0:
-		unstall_ep(PDIUSB_EP_CTLOUT);
-		break;
-#if USB_WITH_EP1
-	case 1:
-		unstall_ep(PDIUSB_EP_EP1OUT);
-		break;
-#endif
-#if USB_WITH_EP2
-	case 2:
-		unstall_ep(PDIUSB_EP_EP2OUT);
-		break;
-#endif
-	default:
+	ep_index = pdiusb_ep_addr_to_ep_index(ep);
+	if (ep_index == 0xFF) {
 		usb_print1num("PDIUSB: unstall-EP unknown EP", ep);
+		return;
 	}
+	unstall_ep(ep_index);
 }
 
 uint8_t usb_endpoint_is_stalled(uint8_t ep)
 {
-	uint8_t stalled;
+	uint8_t ep_index;
 
-	switch (ep) {
-	case 0:
-		stalled = ep_is_stalled(PDIUSB_EP_CTLOUT);
-		break;
-#if USB_WITH_EP1
-	case 1:
-		stalled = ep_is_stalled(PDIUSB_EP_EP1OUT);
-		break;
-#endif
-#if USB_WITH_EP2
-	case 2:
-		stalled = ep_is_stalled(PDIUSB_EP_EP2OUT);
-		break;
-#endif
-	default:
+	ep_index = pdiusb_ep_addr_to_ep_index(ep);
+	if (ep_index == 0xFF) {
 		usb_print1num("PDIUSB: EP-is-stalled unknown EP", ep);
 		return 1;
 	}
 
-	return stalled;
+	return ep_is_stalled(ep_index);
 }
