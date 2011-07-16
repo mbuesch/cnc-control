@@ -29,7 +29,7 @@ typedef int16_t		s_jiffies_t;
 #define JPS			((uint32_t)15625)
 
 /* Convert milliseconds to jiffies. */
-#define msec2jiffies(msec)   ((jiffies_t)(JPS * (uint32_t)(msec) / (uint32_t)1000))
+#define msec2jiffies(msec)   ((jiffies_t)DIV_ROUND_UP(JPS * (uint32_t)(msec), (uint32_t)1000))
 
 /* Get the jiffies counter */
 static inline jiffies_t get_jiffies(void)
