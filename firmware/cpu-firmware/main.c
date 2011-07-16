@@ -92,8 +92,6 @@ struct device_state {
 };
 static struct device_state state;
 
-/* The system timer. Use get_jiffies() to access. */
-jiffies_t jiffies;
 /* The "external output-port interface" status. */
 typedef uint16_t extports_t;
 static extports_t extports;
@@ -911,19 +909,11 @@ void update_userinterface(void)
 	state.leds_need_update = 1;
 }
 
-/* The system timer */
-ISR(TIMER1_COMPA_vect)
-{
-	jiffies++;
-}
-
 static void systimer_init(void)
 {
-	/* Initialize a 0.001 second timer. */
 	TCCR1A = 0;
-	TCCR1B = (1 << CS11) | (1 << WGM12);
-	OCR1A = 2000;
-	TIMSK |= (1 << OCIE1A);
+	TCCR1B = (1 << CS10) | (0 << CS11) | (1 << CS12);
+	OCR1A = 0;
 }
 
 static void handle_debug_ringbuffer(void)
@@ -970,8 +960,8 @@ int main(void)
 {
 	uint8_t mcucsr;
 
-	static jiffies8_t prev_jiffies_lo;
-	jiffies8_t jiffies_lo;
+	static jiffies_t next_ms_tick;
+	jiffies_t j;
 
 	irq_disable();
 	mcucsr = MCUCSR;
@@ -996,9 +986,9 @@ int main(void)
 
 	irq_enable();
 	while (1) {
-		jiffies_lo = get_jiffies_low();
-		if (jiffies_lo != prev_jiffies_lo) {
-			prev_jiffies_lo = jiffies_lo;
+		j = get_jiffies();
+		if (time_after(j, next_ms_tick)) {
+			next_ms_tick = j + msec2jiffies(1);
 			spi_async_ms_tick();
 		}
 
