@@ -168,7 +168,7 @@ extern void _pgm_read_invalid_type_size(void);
  * Returns 0, if no bit is set. */
 uint8_t ffs16(uint16_t value);
 
-#define DIV_ROUND_UP(n, d)	(((n) + (d) - 1) / (d))
+#define DIV_ROUND_UP(n, d)	(((n) + (d) - 1ul) / (d))
 
 
 #endif /* MY_UTIL_H_ */
