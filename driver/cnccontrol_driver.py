@@ -49,7 +49,18 @@ def crc8Buf(crc, iterable):
 		crc = crc8(crc, b)
 	return crc
 
-class CNCCException(Exception): pass
+class CNCCException(Exception):
+	@classmethod
+	def info(cls, message):
+		print "CNC Control:", message
+
+	@classmethod
+	def warn(cls, message):
+		print "CNC Control WARNING:", message
+
+	@classmethod
+	def error(cls, message):
+		raise cls(message)
 
 class FixPt:
 	FIXPT_FRAC_BITS		= 16
@@ -74,7 +85,7 @@ class FixPt:
 				     (val[2] << 16) | (val[3] << 24))
 			self.floatval = round(float(raw) / float(1 << self.FIXPT_FRAC_BITS), 4)
 		except (TypeError, IndexError), e:
-			raise CNCCException("FixPt TypeError")
+			CNCCException.error("FixPt TypeError")
 
 	@staticmethod
 	def __int2raw(val):
@@ -279,7 +290,7 @@ class ControlMsgBootWritebuf(ControlMsg):
 		self.crc = crc8Buf(0, data) ^ 0xFF
 		nrPadding = ControlMsgBootWritebuf.DATA_MAX_BYTES - len(data)
 		if nrPadding < 0:
-			CNCCException("ControlMsg-BootWritebuf: invalid data length %d" %\
+			CNCCException.error("ControlMsg-BootWritebuf: invalid data length %d" %\
 				(len(data)))
 		self.data = data
 		self.data.extend([0] * nrPadding)
@@ -337,9 +348,9 @@ class ControlReply:
 				return ControlReplyVal16(raw[0] | (raw[1] << 8),
 							 hdrFlags=flags, hdrSeqno=seqno)
 			else:
-				CNCCException("Unknown ControlReply ID: %d" % id)
+				CNCCException.error("Unknown ControlReply ID: %d" % id)
 		except (IndexError, KeyError):
-			raise CNCCException("Failed to parse ControlReply (%d bytes)" % len(raw))
+			CNCCException.error("Failed to parse ControlReply (%d bytes)" % len(raw))
 
 	def __repr__(self):
 		return "Unknown reply code"
@@ -455,9 +466,9 @@ class ControlIrq:
 				return ControlIrqLogmsg(raw[0:10],
 							hdrFlags=flags, hdrSeqno=seqno)
 			else:
-				raise CNCCException("Unknown ControlIrq ID: %d" % id)
+				CNCCException.error("Unknown ControlIrq ID: %d" % id)
 		except (IndexError, KeyError):
-			raise CNCCException("Failed to parse ControlIrq (%d bytes)" % len(raw))
+			CNCCException.error("Failed to parse ControlIrq (%d bytes)" % len(raw))
 
 	def __repr__(self):
 		return "Unknown interrupt"
@@ -545,7 +556,7 @@ class JogState:
 			self.__direction, self.__incremental, self.__velocity
 		if not equal(direction.floatval, 0.0):
 			if datetime.now() > self.__timeout:
-				print "WARNING: Jog keepalife timer expired."
+				CNCCException.warn("Jog keepalife timer expired")
 				self.reset()
 				return self.STOPDATA
 		return (direction, incremental, velocity)
@@ -585,7 +596,7 @@ class CNCControl:
 			return False
 		if reply.id == ControlReply.REPLY_ERROR and\
 		   reply.code != ControlReplyError.CTLERR_CONTEXT:
-			raise CNCCException("Failed to ping the application: %s" % str(reply))
+			CNCCException.error("Failed to ping the application: %s" % str(reply))
 		# Check if we're in the bootloader code
 		ping = ControlMsgPing(hdrFlags=ControlMsg.CONTROL_FLG_BOOTLOADER)
 		reply = self.controlMsgSyncReply(ping)
@@ -593,8 +604,8 @@ class CNCControl:
 			return True
 		if reply.id == ControlReply.REPLY_ERROR and\
 		   reply.code != ControlReplyError.CTLERR_CONTEXT:
-			raise CNCCException("Failed to ping the bootloader: %s" % str(reply))
-		raise CNCCException("Unknown PING error")
+			CNCCException.error("Failed to ping the bootloader: %s" % str(reply))
+		CNCCException.error("Unknown PING error")
 
 	def probe(self, sendInit=True):
 		if self.deviceAvailable:
@@ -624,10 +635,10 @@ class CNCControl:
 		if sendInit and not self.deviceRunsBootloader():
 			reply = self.controlMsgSyncReply(ControlMsgReset())
 			if not reply.isOK():
-				raise CNCCException("Failed to reset the device state")
+				CNCCException.error("Failed to reset the device state")
 			reply = self.controlMsgSyncReply(ControlMsgDevflags(0, 0))
 			if not reply.isOK():
-				raise CNCCException("Failed to read device flags")
+				CNCCException.error("Failed to read device flags")
 			devFlags = reply.value
 			if devFlags & ControlMsgDevflags.DEVICE_FLG_ON:
 				self.deviceIsOn = True
@@ -649,6 +660,7 @@ class CNCControl:
 
 	def __initializeData(self):
 		self.messageSequenceNumber = 0
+		self.expectedIrqSeqNum = None
 		self.deviceIsOn = False
 		self.estop = False
 		self.motionHaltRequest = False
@@ -679,7 +691,7 @@ class CNCControl:
 	def __devicePlug(self):
 		self.deviceAvailable = True
 		if self.verbose:
-			print "CNC Control device connected."
+			CNCCException.info("device connected")
 
 	def __deviceUnplug(self):
 		if self.deviceAvailable:
@@ -687,7 +699,7 @@ class CNCControl:
 
 	def __usbError(self, usbException):
 		self.__deviceUnplug()
-		raise CNCCException("USB error: " + str(usbException))
+		CNCCException.error("USB error: " + str(usbException))
 
 	def eventWait(self, timeout=15):
 		if not self.deviceAvailable:
@@ -699,9 +711,19 @@ class CNCControl:
 			if not e.errno:
 				return True
 			self.__usbError(e)
-		irq = ControlIrq.parseRaw(data)
+		self.__handleInterrupt(data)
+		return True
+
+	def __handleInterrupt(self, rawData):
+		irq = ControlIrq.parseRaw(rawData)
 		if irq.flags & ControlIrq.IRQ_FLG_TXQOVR:
-			print "CNC Control WARNING: Interrupt queue overflow detected"
+			CNCCException.warn("Interrupt queue overflow detected")
+		if self.expectedIrqSeqNum is not None and\
+		   self.expectedIrqSeqNum != irq.seqno:
+			CNCCException.warn("Out of order IRQ sequence number "\
+				"found. Expected %d, but got %d." %\
+				(self.expectedIrqSeqNum, irq.seqno))
+		self.expectedIrqSeqNum = (irq.seqno + 1) & 0xFF
 #		print irq
 		if irq.id == ControlIrq.IRQ_JOG:
 			cont = bool(irq.jogFlags & ControlIrqJog.IRQ_JOG_CONTINUOUS)
@@ -726,10 +748,10 @@ class CNCControl:
 			self.foState = irq.state
 		elif irq.id == ControlIrq.IRQ_DEVFLAGS:
 			if irq.devFlags & ControlMsgDevflags.DEVICE_FLG_ON:
-				print "CNC Control was turned ON"
+				CNCCException.info("turned ON")
 				self.deviceIsOn = True
 			else:
-				print "CNC Control was turned OFF"
+				CNCCException.info("turned OFF")
 				self.deviceIsOn = False
 		elif irq.id == ControlIrq.IRQ_HALT:
 			self.motionHaltRequest = True
@@ -744,8 +766,7 @@ class CNCControl:
 				msg = msg[1:]
 			self.logMsgBuf = msg[0]
 		else:
-			print "Unhandled IRQ:", irq
-		return True
+			CNCCException.warn("Unhandled IRQ: " + str(irq))
 
 	def controlMsg(self, msg, timeout=300):
 		try:
@@ -755,7 +776,7 @@ class CNCControl:
 			rawData = msg.getRaw()
 			size = self.usbh.bulkWrite(EP_OUT, rawData, timeout)
 			if len(rawData) != size:
-				raise CNCCException("Only wrote %d bytes of %d bytes "
+				CNCCException.error("Only wrote %d bytes of %d bytes "
 					"bulk write" % (size, len(rawData)))
 		except (usb.USBError), e:
 			self.__usbError(e)
@@ -771,7 +792,7 @@ class CNCControl:
 		self.controlMsg(msg, timeout)
 		reply = self.controlReply(timeout)
 		if msg.seqno != reply.seqno:
-			raise CNCCException("Got invalid reply sequence number: %d vs %d" %\
+			CNCCException.error("Got invalid reply sequence number: %d vs %d" %\
 				(msg.seqno, reply.seqno))
 		return reply
 
@@ -784,7 +805,7 @@ class CNCControl:
 		msg = ControlMsgDevflags(ControlMsgDevflags.DEVICE_FLG_TWOHANDEN, flg)
 		reply = self.controlMsgSyncReply(msg)
 		if not reply.isOK():
-			raise CNCCException("Failed to set Twohand flag")
+			CNCCException.error("Failed to set Twohand flag")
 
 	def setIncrementAtIndex(self, index, increment):
 		if not self.deviceAvailable:
@@ -794,7 +815,7 @@ class CNCControl:
 		msg = ControlMsgSetincrement(increment, index)
 		reply = self.controlMsgSyncReply(msg)
 		if not reply.isOK():
-			raise CNCCException("Failed to set increment %f at index %d: %s" %\
+			CNCCException.error("Failed to set increment %f at index %d: %s" %\
 				(increment, index, str(reply)))
 
 	def setDebugging(self, debugLevel, usbMessages):
@@ -814,7 +835,7 @@ class CNCControl:
 					 flg)
 		reply = self.controlMsgSyncReply(msg)
 		if not reply.isOK():
-			raise CNCCException("Failed to set debugging flags")
+			CNCCException.error("Failed to set debugging flags")
 
 	def setEstopState(self, asserted):
 		# Send the estop state to the device
@@ -825,7 +846,7 @@ class CNCControl:
 		msg = ControlMsgEstopupdate(asserted)
 		reply = self.controlMsgSyncReply(msg)
 		if not reply.isOK():
-			raise CNCCException("Failed to send ESTOP update")
+			CNCCException.error("Failed to send ESTOP update")
 		self.estop = asserted
 
 	def deviceIsTurnedOn(self):
@@ -860,7 +881,7 @@ class CNCControl:
 		msg = ControlMsgSpindleupdate(direction2state[direction])
 		reply = self.controlMsgSyncReply(msg)
 		if not reply.isOK():
-			raise CNCCException("Failed to send spindle update")
+			CNCCException.error("Failed to send spindle update")
 
 	def getFeedOverrideState(self, minValue, maxValue):
 		# Returns override state in percent (float)
@@ -880,7 +901,7 @@ class CNCControl:
 		msg = ControlMsgFoupdate(int(round(percent)))
 		reply = self.controlMsgSyncReply(msg)
 		if not reply.isOK():
-			raise CNCCException("Failed to send feed override state")
+			CNCCException.error("Failed to send feed override state")
 		self.feedOverridePercent = percent
 
 	def setAxisPosition(self, axis, position):
@@ -898,7 +919,7 @@ class CNCControl:
 			msg = ControlMsgAxisupdate(pos, axis)
 			reply = self.controlMsgSyncReply(msg)
 			if not reply.isOK():
-				raise CNCCException("Axis update failed: %s" % str(reply))
+				CNCCException.error("Axis update failed: %s" % str(reply))
 			self.axisPosUpdatePending[axis] = False
 			self.lastAxisPosUpdate[axis] = now
 
@@ -912,7 +933,7 @@ class CNCControl:
 		msg = ControlMsgAxisenable(mask)
 		reply = self.controlMsgSyncReply(msg)
 		if not reply.isOK():
-			raise CNCCException("Failed to set axis mask: %s" % str(reply))
+			CNCCException.error("Failed to set axis mask: %s" % str(reply))
 
 	def getJogState(self, axis):
 		# Returns (direction, incremental, velocity)
