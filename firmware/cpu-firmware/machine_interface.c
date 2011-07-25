@@ -336,6 +336,8 @@ uint8_t usb_app_ep1_tx_poll(void *buffer)
 		e = tlist_first_entry(&tx_queued, struct tx_queue_entry, list);
 		tlist_move_tail(&e->list, &tx_inflight);
 
+		e->buffer.seqno = irq_sequence_number++;
+
 		BUILD_BUG_ON(sizeof(e->buffer) > USBCFG_EP1_MAXSIZE);
 		memcpy(buffer, &e->buffer, e->size);
 		ret_size = e->size;
@@ -352,8 +354,7 @@ uint8_t usb_app_ep2_tx_poll(void *buffer)
 }
 
 static bool interface_queue_interrupt(const struct control_interrupt *irq,
-				      uint8_t size, bool overflowflag,
-				      uint8_t seqno)
+				      uint8_t size, bool overflowflag)
 {
 	struct control_interrupt *irqbuf;
 	struct tx_queue_entry *e;
@@ -367,11 +368,10 @@ static bool interface_queue_interrupt(const struct control_interrupt *irq,
 	if (!e)
 		return 0;
 	e->size = size;
-	irqbuf = (struct control_interrupt *)(&e->buffer);
+	irqbuf = &e->buffer;
 	memcpy(irqbuf, irq, size);
 	if (unlikely(overflowflag))
 		irqbuf->flags |= IRQ_FLG_TXQOVR;
-	irqbuf->seqno = seqno;
 
 	irq_restore(sreg);
 
@@ -417,17 +417,12 @@ void send_interrupt(const struct control_interrupt *irq,
 		    uint8_t size)
 {
 	bool ok, dropped;
-	uint8_t i, sreg, seqno;
-
-	sreg = irq_disable_save();
-	seqno = irq_sequence_number++;
-	irq_restore(sreg);
+	uint8_t i;
 
 	while (1) {
 		for (i = 0; i < 5; i++) {
 			ok = interface_queue_interrupt(irq, size,
-						       irq_queue_overflow,
-						       seqno);
+						       irq_queue_overflow);
 			if (likely(ok)) {
 				irq_queue_overflow = 0;
 				return;
