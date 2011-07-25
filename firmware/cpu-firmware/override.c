@@ -25,43 +25,25 @@
 #include <avr/wdt.h>
 
 
-/* Hysteresis, in ADC LSBs */
-#define OVERRIDE_HYST		7
-
-#define ADC_MIN			0
-#define ADC_MAX			0x3FF
-
-
-/* The current position value, in ADC LSBs. */
-static uint16_t override_position;
+#define ADC_HYST		16
+#define ADC_MINMAX_DEADBAND	4
+#define ADC_REAL_MIN		0
+#define ADC_REAL_MAX		0x3FF
+#define ADC_MIN			(ADC_REAL_MIN + ADC_MINMAX_DEADBAND)
+#define ADC_MAX			(ADC_REAL_MAX - ADC_MINMAX_DEADBAND)
 
 
-static void adc_trigger(bool with_irq)
+static uint16_t last_override_adc;
+static uint8_t last_override_pos;
+
+
+static void adc_trigger(bool freerunning)
 {
-	if (ADCSRA & (1 << ADSC)) {
-		/* already running. */
-		return;
-	}
 	/* Start ADC0 with AVCC reference and a prescaler of 128. */
 	ADMUX = (1 << REFS0);
-	ADCSRA = (1 << ADEN) | ((uint8_t)with_irq << ADIE) | (1 << ADSC) |
+	ADCSRA = (1 << ADEN) | (0 << ADIE) | (1 << ADSC) |
+		 (freerunning ? (1 << ADATE) : 0) |
 		 (1 << ADPS0) | (1 << ADPS1) | (1 << ADPS2);
-}
-
-ISR(ADC_vect)
-{
-	uint16_t adc;
-
-	adc = ADC;
-
-	if (adc < ADC_MIN + OVERRIDE_HYST)
-		override_position = ADC_MIN;
-	else if (adc > ADC_MAX - OVERRIDE_HYST)
-		override_position = ADC_MAX;
-	else if (abs((int16_t)adc - (int16_t)override_position) > OVERRIDE_HYST)
-		override_position = adc - adc % OVERRIDE_HYST;
-
-	adc_trigger(1);
 }
 
 static inline void adc_busywait(void)
@@ -70,33 +52,44 @@ static inline void adc_busywait(void)
 	ADCSRA |= (1 << ADIF); /* Clear IRQ flag */
 }
 
-static void adc_init(void)
+void override_init(void)
 {
+	last_override_adc = ADC_REAL_MIN;
+	last_override_pos = 0;
 	/* Discard the first measurement */
 	adc_trigger(0);
 	adc_busywait();
-	/* Trigger a real measurement */
+	/* Start the ADC in freerunning mode. */
 	adc_trigger(1);
-}
-
-void override_init(void)
-{
-	override_position = 0;
-	adc_init();
 }
 
 uint8_t override_get_pos(void)
 {
-	uint8_t sreg, pos;
-	uint16_t adc_pos;
+	uint16_t adc;
+	uint8_t pos;
 
-	sreg = irq_disable_save();
-	adc_pos = override_position;
-	irq_restore(sreg);
+	if (!(ADCSRA & (1 << ADIF))) {
+		/* There was no new conversion */
+		return last_override_pos;
+	}
+	adc = ADC;
+	ADCSRA |= (1 << ADIF); /* Clear IRQ flag */
 
-	adc_pos -= ADC_MIN;
-	pos = (uint32_t)adc_pos * (uint32_t)0xFF /
-	      (uint32_t)(ADC_MAX - ADC_MIN);
+	if (adc <= ADC_MIN)
+		adc = ADC_REAL_MIN;
+	else if (adc >= ADC_MAX)
+		adc = ADC_REAL_MAX;
+	else if (abs((int16_t)adc - (int16_t)last_override_adc) <= ADC_HYST)
+		adc = last_override_adc;
+
+	if (adc == last_override_adc)
+		return last_override_pos;
+
+	pos = ((uint32_t)adc - (uint32_t)ADC_REAL_MIN) * (uint32_t)0xFF /
+	      ((uint32_t)ADC_REAL_MAX - (uint32_t)ADC_REAL_MIN);
+
+	last_override_adc = adc;
+	last_override_pos = pos;
 
 	return pos;
 }
