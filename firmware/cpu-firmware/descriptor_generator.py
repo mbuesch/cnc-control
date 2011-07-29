@@ -14,6 +14,7 @@
 """
 
 import sys
+import atexit
 
 
 # bcdUSB
@@ -78,36 +79,50 @@ USB_ENDPOINT_MAX_ADJUSTABLE	= 0x80
 
 
 
-class Descriptor:
+class Descriptor(object):
+	STRDESC = 0xFF
+
 	def __init__(self):
 		self.attributes = {}
 		self.index = 0
 
-	def alloc(self, name, type, value):
+	@staticmethod
+	def name2type(name):
+		if name.startswith("bcd") or\
+		   name.startswith("id") or\
+		   name.startswith("w"):
+			return 16
+		if name.startswith("i"):
+			return Descriptor.STRDESC
+		if name.startswith("bm") or\
+		   name.startswith("b"):
+			return 8
+		raise Exception("Could not determine type from name '%s'" % name)
+
+	def alloc(self, name, value):
 		if name in self.attributes:
 			raise Exception("Attribute " + name + " double allocation")
-		self.attributes[name] = [type, self.index, value]
+		self.attributes[name] = [self.index, value]
 		self.index += 1
 
 	def set(self, name, value):
 		if not name in self.attributes:
 			raise Exception("Attribute " + name + " not found")
-		self.attributes[name][2] = value
+		self.attributes[name][1] = value
 
 	def getValue(self, name):
 		if not name in self.attributes:
 			raise Exception("Attribute " + name + " not found")
-		return self.attributes[name][2]
+		(index, value) = self.attributes[name]
+		return value
 
 	def getList(self):
-		# Returns a list of [name, type, value]
-		l = [ ["", 0, 0] ] * len(self.attributes)
-		for attrName in self.attributes.keys():
-			attr = self.attributes[attrName]
-			l[attr[1]] = [attrName, attr[0], attr[2]]
+		# Returns a list of (name, value) tuples.
+		l = [ None ] * len(self.attributes)
+		for attrName in self.attributes:
+			(index, value) = self.attributes[attrName]
+			l[index] = (attrName, value)
 		return l
-
-STRDESC = 0xFF
 
 class StringDescriptor:
 	currentId = 1
@@ -138,20 +153,21 @@ class Device(Descriptor):
 	def __init__(self):
 		Descriptor.__init__(self)
 		self.configs = []
-		self.alloc("bLength",			8,		USB_DT_DEVICE_SIZE)
-		self.alloc("bDescriptorType",		8,		USB_DT_DEVICE)
-		self.alloc("bcdUSB",			16,		USB_BCD_11)
-		self.alloc("bDeviceClass",		8,		0)
-		self.alloc("bDeviceSubClass",		8,		0)
-		self.alloc("bDeviceProtocol",		8,		0)
-		self.alloc("bMaxPacketSize0",		8,		0)
-		self.alloc("idVendor",			16,		0x6666)
-		self.alloc("idProduct",			16,		0x1337)
-		self.alloc("bcdDevice",			16,		0)
-		self.alloc("iManufacturer",		STRDESC,	"")
-		self.alloc("iProduct",			STRDESC,	"")
-		self.alloc("iSerialNumber",		STRDESC,	"")
-		self.alloc("bNumConfigurations",	8,		0)
+
+		self.alloc("bLength", USB_DT_DEVICE_SIZE)
+		self.alloc("bDescriptorType", USB_DT_DEVICE)
+		self.alloc("bcdUSB", USB_BCD_11)
+		self.alloc("bDeviceClass", 0)
+		self.alloc("bDeviceSubClass", 0)
+		self.alloc("bDeviceProtocol", 0)
+		self.alloc("bMaxPacketSize0", 0)
+		self.alloc("idVendor", 0x6666)
+		self.alloc("idProduct", 0x1337)
+		self.alloc("bcdDevice", 0)
+		self.alloc("iManufacturer", "")
+		self.alloc("iProduct", "")
+		self.alloc("iSerialNumber", "")
+		self.alloc("bNumConfigurations", 0)
 
 	def addConfiguration(self, configuration):
 		self.configs.append(configuration)
@@ -177,28 +193,27 @@ class Device(Descriptor):
 			config.set("wTotalLength", totalLength)
 
 	def __attrParse(self, attr):
-		name = attr[0]
-		type = attr[1]
-		value = attr[2]
-		if type == STRDESC:
+		(name, value) = attr
+		attrType = Descriptor.name2type(name)
+		if attrType == Descriptor.STRDESC:
 			sd = StringDescriptor(value)
 			value = "0x%02X, " % sd.getId()
-		elif type == 8:
+		elif attrType == 8:
 			value = "0x%02X, " % int(value)
-		elif type == 16:
+		elif attrType == 16:
 			value = int(value)
 			value = "0x%02X, 0x%02X, " % (value & 0xFF, (value >> 8) & 0xFF)
 		else:
-			raise Exception("Unknown type (%d)" % type)
-		return (name, type, value)
+			raise Exception("Unknown type (%s)" % str(attrType))
+		return (name, attrType, value)
 
 	def __attrDump(self, attrList):
 		s = ""
 		count = 0
 		for attr in attrList:
-			(name, type, value) = self.__attrParse(attr)
+			(name, attrType, value) = self.__attrParse(attr)
 			s += value
-			if type == 16:
+			if attrType == 16:
 				count += 2
 			else:
 				count += 1
@@ -272,20 +287,24 @@ class Device(Descriptor):
 
 		return s
 
+	def dump(self):
+		print self
+
 class Configuration(Descriptor):
 	def __init__(self, device):
 		Descriptor.__init__(self)
 		self.device = device
 		device.addConfiguration(self)
 		self.interfaces = []
-		self.alloc("bLength",			8,		USB_DT_CONFIG_SIZE)
-		self.alloc("bDescriptorType",		8,		USB_DT_CONFIG)
-		self.alloc("wTotalLength",		16,		0)
-		self.alloc("bNumInterfaces",		8,		0)
-		self.alloc("bConfigurationValue",	8,		0)
-		self.alloc("iConfiguration",		STRDESC,	"")
-		self.alloc("bmAttributes",		8,		0)
-		self.alloc("bMaxPower",			8,		500 / 2)
+
+		self.alloc("bLength", USB_DT_CONFIG_SIZE)
+		self.alloc("bDescriptorType", USB_DT_CONFIG)
+		self.alloc("wTotalLength", 0)
+		self.alloc("bNumInterfaces", 0)
+		self.alloc("bConfigurationValue", 0)
+		self.alloc("iConfiguration", "")
+		self.alloc("bmAttributes", 0)
+		self.alloc("bMaxPower", 500 / 2)
 
 	def addInterface(self, interface):
 		self.interfaces.append(interface)
@@ -297,15 +316,16 @@ class Interface(Descriptor):
 		configuration.addInterface(self)
 		self.endpoints = []
 		self.hiddevice = None
-		self.alloc("bLength",			8,		USB_DT_INTERFACE_SIZE)
-		self.alloc("bDescriptorType",		8,		USB_DT_INTERFACE)
-		self.alloc("bInterfaceNumber",		8,		0)
-		self.alloc("bAlternateSetting",		8,		0)
-		self.alloc("bNumEndpoints",		8,		0)
-		self.alloc("bInterfaceClass",		8,		0)
-		self.alloc("bInterfaceSubClass",	8,		0)
-		self.alloc("bInterfaceProtocol",	8,		0)
-		self.alloc("iInterface",		STRDESC,	"")
+
+		self.alloc("bLength", USB_DT_INTERFACE_SIZE)
+		self.alloc("bDescriptorType", USB_DT_INTERFACE)
+		self.alloc("bInterfaceNumber", 0)
+		self.alloc("bAlternateSetting", 0)
+		self.alloc("bNumEndpoints", 0)
+		self.alloc("bInterfaceClass", 0)
+		self.alloc("bInterfaceSubClass", 0)
+		self.alloc("bInterfaceProtocol", 0)
+		self.alloc("iInterface", "")
 
 	def addEndpoint(self, endpoint):
 		self.endpoints.append(endpoint)
@@ -320,22 +340,33 @@ class Endpoint(Descriptor):
 		Descriptor.__init__(self)
 		self.interface = interface
 		interface.addEndpoint(self)
-		self.alloc("bLength",			8,	USB_DT_ENDPOINT_SIZE)
-		self.alloc("bDescriptorType",		8,	USB_DT_ENDPOINT)
-		self.alloc("bEndpointAddress",		8,	0)
-		self.alloc("bmAttributes",		8,	0)
-		self.alloc("wMaxPacketSize",		16,	0)
-		self.alloc("bInterval",			8,	0)
+
+		self.alloc("bLength", USB_DT_ENDPOINT_SIZE)
+		self.alloc("bDescriptorType", USB_DT_ENDPOINT)
+		self.alloc("bEndpointAddress", 0)
+		self.alloc("bmAttributes", 0)
+		self.alloc("wMaxPacketSize", 0)
+		self.alloc("bInterval", 0)
 
 class HIDDevice(Descriptor):
 	def __init__(self, interface):
 		Descriptor.__init__(self)
 		self.interface = interface
 		interface.addHIDDevice(self)
-		self.alloc("bLength",			8,	9)
-		self.alloc("bDescriptorType",		8,	HID_DT_HID)
-		self.alloc("bcdHID",			16,	0x0111)
-		self.alloc("bCountryCode",		8,	0)
-		self.alloc("bNumDescriptors",		8,	0)
-		self.alloc("bClassDescriptorType",	8,	0)
-		self.alloc("wClassDescriptorLength",	16,	0)
+
+		self.alloc("bLength", 9)
+		self.alloc("bDescriptorType", HID_DT_HID)
+		self.alloc("bcdHID", 0x0111)
+		self.alloc("bCountryCode", 0)
+		self.alloc("bNumDescriptors", 0)
+		self.alloc("bClassDescriptorType", 0)
+		self.alloc("wClassDescriptorLength", 0)
+
+device = Device()
+try:
+	device.set("idVendor", int(sys.argv[1], 16))
+	device.set("idProduct", int(sys.argv[2], 16))
+except (ValueError, IndexError), e:
+	pass
+
+atexit.register(device.dump)
