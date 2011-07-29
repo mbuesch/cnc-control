@@ -12,11 +12,18 @@
  */
 uint8_t interrupt_queue_freecount(void);
 
+void send_interrupt_count(const struct control_interrupt *irq,
+			  uint8_t size, uint8_t count);
+
 /** send_interrupt - Send an interrupt to the host.
  * This is the API for sending an interrupt.
  */
+static inline
 void send_interrupt(const struct control_interrupt *irq,
-		    uint8_t size);
+		    uint8_t size)
+{
+	send_interrupt_count(irq, size, 1);
+}
 
 /** send_interrupt_discard_old - Send an interrupt to the host.
  * Also discard already queued IRQs of the same type.

@@ -32,12 +32,12 @@
 struct tx_queue_entry {
 	struct control_interrupt buffer;
 	uint8_t size;
+	uint8_t count;
 	struct tiny_list list;
 };
 
 static struct tx_queue_entry tx_queue_entry_buffer[INTERRUPT_QUEUE_MAX_LEN];
 static struct tiny_list tx_queued;
-static struct tiny_list tx_inflight;
 static struct tiny_list tx_free;
 static uint8_t tx_free_count;
 static bool irq_queue_overflow;
@@ -81,7 +81,6 @@ void usb_app_reset(void)
 	memset(tx_queue_entry_buffer, 0, sizeof(tx_queue_entry_buffer));
 
 	tlist_init(&tx_queued);
-	tlist_init(&tx_inflight);
 	tlist_init(&tx_free);
 	for (i = 0; i < ARRAY_SIZE(tx_queue_entry_buffer); i++) {
 		e = &tx_queue_entry_buffer[i];
@@ -324,29 +323,31 @@ uint8_t usb_app_ep2_rx(uint8_t *data, uint8_t size,
 /* Interrupt endpoint */
 uint8_t usb_app_ep1_tx_poll(void *buffer)
 {
-	struct tx_queue_entry *e, *tmp_e;
+	struct tx_queue_entry *e;
 	struct control_interrupt *irqbuf = buffer;
-	uint8_t ret_size = 0, sreg;
+	uint8_t ret_size, sreg;
 
 	sreg = irq_disable_save();
 
-	tlist_for_each_delsafe(e, tmp_e, &tx_inflight, list)
-		tqentry_free(e);
-
-	if (!tlist_is_empty(&tx_queued)) {
-		e = tlist_first_entry(&tx_queued, struct tx_queue_entry, list);
-		tlist_move_tail(&e->list, &tx_inflight);
-
-		BUILD_BUG_ON(sizeof(e->buffer) > USBCFG_EP1_MAXSIZE);
-		memcpy(irqbuf, &e->buffer, e->size);
-		ret_size = e->size;
-
-		irqbuf->seqno = irq_sequence_number++;
-		if (unlikely(irq_queue_overflow)) {
-			irq_queue_overflow = 0;
-			irqbuf->flags |= IRQ_FLG_TXQOVR;
-		}
+	if (tlist_is_empty(&tx_queued)) {
+		irq_restore(sreg);
+		return 0;
 	}
+
+	e = tlist_first_entry(&tx_queued, struct tx_queue_entry, list);
+
+	BUILD_BUG_ON(sizeof(e->buffer) > USBCFG_EP1_MAXSIZE);
+	memcpy(irqbuf, &e->buffer, e->size);
+	ret_size = e->size;
+
+	irqbuf->seqno = irq_sequence_number++;
+	if (unlikely(irq_queue_overflow)) {
+		irq_queue_overflow = 0;
+		irqbuf->flags |= IRQ_FLG_TXQOVR;
+	}
+
+	if (--e->count == 0)
+		tqentry_free(e);
 
 	irq_restore(sreg);
 
@@ -359,7 +360,7 @@ uint8_t usb_app_ep2_tx_poll(void *buffer)
 }
 
 static bool interface_queue_interrupt(const struct control_interrupt *irq,
-				      uint8_t size)
+				      uint8_t size, uint8_t count)
 {
 	struct control_interrupt *irqbuf;
 	struct tx_queue_entry *e;
@@ -375,6 +376,7 @@ static bool interface_queue_interrupt(const struct control_interrupt *irq,
 		return 0;
 	}
 	e->size = size;
+	e->count = count;
 	irqbuf = &e->buffer;
 	memcpy(irqbuf, irq, size);
 
@@ -418,15 +420,15 @@ static bool interface_drop_one_droppable_irq(void)
 	return dropped;
 }
 
-void send_interrupt(const struct control_interrupt *irq,
-		    uint8_t size)
+void send_interrupt_count(const struct control_interrupt *irq,
+			  uint8_t size, uint8_t count)
 {
 	bool ok, dropped;
 	uint8_t i;
 
 	while (1) {
 		for (i = 0; i < 5; i++) {
-			ok = interface_queue_interrupt(irq, size);
+			ok = interface_queue_interrupt(irq, size, count);
 			if (likely(ok))
 				return;
 
