@@ -660,7 +660,6 @@ class CNCControl:
 
 	def __initializeData(self):
 		self.messageSequenceNumber = 0
-		self.expectedIrqSeqNum = None
 		self.deviceIsOn = False
 		self.estop = False
 		self.motionHaltRequest = False
@@ -718,12 +717,6 @@ class CNCControl:
 		irq = ControlIrq.parseRaw(rawData)
 		if irq.flags & ControlIrq.IRQ_FLG_TXQOVR:
 			CNCCException.warn("Interrupt queue overflow detected")
-		if self.expectedIrqSeqNum is not None and\
-		   self.expectedIrqSeqNum != irq.seqno:
-			CNCCException.warn("Out of order IRQ sequence number "\
-				"found. Expected %d, but got %d." %\
-				(self.expectedIrqSeqNum, irq.seqno))
-		self.expectedIrqSeqNum = (irq.seqno + 1) & 0xFF
 #		print irq
 		if irq.id == ControlIrq.IRQ_JOG:
 			cont = bool(irq.jogFlags & ControlIrqJog.IRQ_JOG_CONTINUOUS)
