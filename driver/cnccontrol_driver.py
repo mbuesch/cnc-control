@@ -701,7 +701,7 @@ class CNCControl:
 		self.__deviceUnplug()
 		CNCCException.error("USB error: " + str(usbException))
 
-	def eventWait(self, timeout=15):
+	def eventWait(self, timeout=50):
 		if not self.deviceAvailable:
 			return False
 		try:
