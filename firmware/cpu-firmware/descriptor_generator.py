@@ -208,84 +208,84 @@ class Device(Descriptor):
 		return (name, attrType, value)
 
 	def __attrDump(self, attrList):
-		s = ""
+		s = []
 		count = 0
 		for attr in attrList:
 			(name, attrType, value) = self.__attrParse(attr)
-			s += value
+			s.append(value)
 			if attrType == 16:
 				count += 2
 			else:
 				count += 1
 			if count % 10 == 0 and count != 0:
-				s += "\n\t"
-		return (s, count)
+				s.append("\n\t")
+		return ("".join(s), count)
 
 	def __repr__(self):
 		self.__autoConfig()
-		s = "/*** THIS FILE IS GENERATED. DO NOT EDIT! ***/\n\n"
-		s += "static const uint8_t PROGMEM device_descriptor[] = {\n\t"
+		s = [ "/*** THIS FILE IS GENERATED. DO NOT EDIT! ***/\n\n" ]
+		s.append("static const uint8_t PROGMEM device_descriptor[] = {\n\t")
 		(string, cnt) = self.__attrDump(self.getList())
-		s += string
-		s += "\n};\n\n"
+		s.append(string)
+		s.append("\n};\n\n")
 
 		configNr = 0
 		for config in self.configs:
 			count = 0
-			s += "static const uint8_t PROGMEM config%d_descriptor[] = {\n\t" % configNr
+			s.append("static const uint8_t PROGMEM config%d_descriptor[] = {\n\t" % configNr)
 			(string, cnt) = self.__attrDump(config.getList())
-			s += string
+			s.append(string)
 			count += cnt
-			s += "\n"
+			s.append("\n")
 			for interface in config.interfaces:
-				s += "\t/* Interface */\n\t"
+				s.append("\t/* Interface */\n\t")
 				(string, cnt) = self.__attrDump(interface.getList())
-				s += string
+				s.append(string)
 				count += cnt
-				s += "\n"
+				s.append("\n")
 				if interface.hiddevice:
-					s += "\t/* HID Device */\n\t"
+					s.append("\t/* HID Device */\n\t")
 					(string, cnt) = self.__attrDump(interface.hiddevice.getList())
-					s += string
-					s += "\n\t#define HID_DEVICE_DESC_OFFSET	%d" % count
+					s.append(string)
+					s.append("\n\t#define HID_DEVICE_DESC_OFFSET\t%d" % count)
 					count += cnt
-					s += "\n"
+					s.append("\n")
 				for ep in interface.endpoints:
-					s += "\t/* Endpoint */\n\t"
+					s.append("\t/* Endpoint */\n\t")
 					(string, cnt) = self.__attrDump(ep.getList())
-					s += string
+					s.append(string)
 					count += cnt
-					s += "\n"
-			s += "};\n\n"
+					s.append("\n")
+			s.append("};\n\n")
 			configNr += 1
 
-		s += "static const uint16_t PROGMEM config_descriptor_pointers[] = {\n"
+		s.append("static const uint16_t PROGMEM config_descriptor_pointers[] = {\n")
 		for i in range(0, len(self.configs)):
-			s += "\t(uint16_t)(void *)config%d_descriptor, sizeof(config%d_descriptor),\n" % (i, i)
-		s += "};\n\n"
+			s.append("\t(uint16_t)(void *)config%d_descriptor, sizeof(config%d_descriptor),\n" % (i, i))
+		s.append("};\n\n")
 
 		# Only one language for now...
-		s += "/* 0: Language ID (US) */\n"
-		s += "static const char PROGMEM string0_descriptor[] = \"\\x09\\x04\";\n"
+		s.append("/* 0: Language ID (US) */\n")
+		s.append("static const char PROGMEM string0_descriptor[] = \"\\x09\\x04\";\n")
 
 		for sd in StringDescriptor.stringDescriptorList:
-			s += "\n/* %d: " % sd.getId()
-			s += sd.getText()
-			s += "*/\n"
-			s += "static const char PROGMEM string%d_descriptor[] = " % sd.getId()
-			s += "\"%s\";\n" % sd.getString()
-		s += "\n"
+			s.append("\n/* %d: " % sd.getId())
+			s.append(sd.getText())
+			s.append("*/\n")
+			s.append("static const char PROGMEM string%d_descriptor[] = " % sd.getId())
+			s.append("\"%s\";\n" % sd.getString())
+		s.append("\n")
 
-		s += "static const uint16_t PROGMEM string_descriptor_pointers[] = {\n"
-		s += "\t(uint16_t)(void *)string%d_descriptor, %d,\n" % (0, 2)
+		s.append("static const uint16_t PROGMEM string_descriptor_pointers[] = {\n")
+		s.append("\t(uint16_t)(void *)string%d_descriptor, %d,\n" % (0, 2))
 		i = 1
 		for sd in StringDescriptor.stringDescriptorList:
-			s += "\t(uint16_t)(void *)string%d_descriptor, %d,\n" %\
-				(i, sd.getLength())
+			s.append("\t(uint16_t)(void *)string%d_descriptor, %d,\n" %\
+				 (i, sd.getLength()))
 			i += 1
-		s += "};\n\n"
+		s.append("};\n\n")
 
-		return s
+		return "".join(s)
 
 	def dump(self):
 		print self
