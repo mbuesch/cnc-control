@@ -559,7 +559,7 @@ static void jog_stop(void)
 	irq.jog.flags = IRQ_JOG_CONTINUOUS;
 	irq.jog.increment = INT32_TO_FIXPT(0);
 
-	send_interrupt(&irq, CONTROL_IRQ_SIZE(jog));
+	send_interrupt_count(&irq, CONTROL_IRQ_SIZE(jog), 3);
 
 	state.jog = JOG_STOPPED;
 }
@@ -634,7 +634,7 @@ static void halt_motion(void)
 		.flags		= IRQ_FLG_PRIO,
 	};
 
-	send_interrupt(&irq, CONTROL_IRQ_SIZE(halt));
+	send_interrupt_count(&irq, CONTROL_IRQ_SIZE(halt), 3);
 }
 
 static void interpret_jogwheel(int8_t jogwheel, bool wheel_pressed)
