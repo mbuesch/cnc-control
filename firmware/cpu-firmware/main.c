@@ -976,6 +976,8 @@ int main(void)
 	if (mcucsr & (1 << WDRF))
 		debug_printf("WARNING: watchdog reset triggered\n");
 	lcd_init();
+	lcd_printf("CNC-Control %u.%u\nInitializing",
+		   VERSION_MAJOR, VERSION_MINOR);
 	extports_init();
 	coprocessor_init();
 	override_init();

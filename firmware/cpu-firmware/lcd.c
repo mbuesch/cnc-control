@@ -174,6 +174,5 @@ void lcd_init(void)
 
 	lcd_cursor_pos = 0;
 	lcd_clear_buffer();
-	lcd_printf("CNC-Control\nInitializing");
 	lcd_commit();
 }
