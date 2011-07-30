@@ -37,6 +37,9 @@ class Context:
 
 		self.programStop = BitPoke(h, "program.stop", cycleMsec=100)
 
+		self.spindleStart = BitPoke(h, "spindle.start")
+		self.spindleStop = BitPoke(h, "spindle.stop")
+
 class BitPoke:
 	def __init__(self, h, pin, cycleMsec=15):
 		self.h = h
@@ -106,22 +109,24 @@ def updatePins(ctx):
 	ctx.programStop.update()
 
 	# Update master spindle state
-	direction = cncc.getSpindleCommand()
-	if direction < 0: # backward
-		h["spindle.forward"] = 0
-		h["spindle.reverse"] = 1
-		h["spindle.stop"] = 0
-		h["spindle.start"] = 1
-	elif direction > 0: # forward
-		h["spindle.forward"] = 1
-		h["spindle.reverse"] = 0
-		h["spindle.stop"] = 0
-		h["spindle.start"] = 1
-	else: # stop
-		h["spindle.stop"] = 1
-		h["spindle.start"] = 0
-		h["spindle.forward"] = 0
-		h["spindle.reverse"] = 0
+	if ctx.spindleStart.update() and\
+	   ctx.spindleStop.update():
+		direction = cncc.getSpindleCommand()
+		if direction < 0: # backward
+			if not h["spindle.runs-bwd"]:
+				h["spindle.forward"] = 0
+				h["spindle.reverse"] = 1
+				ctx.spindleStart.startDuty()
+		elif direction > 0: # forward
+			if not h["spindle.runs-fwd"]:
+				h["spindle.forward"] = 1
+				h["spindle.reverse"] = 0
+				ctx.spindleStart.startDuty()
+		else: # stop
+			if h["spindle.runs-fwd"] or h["spindle.runs-bwd"]:
+				h["spindle.forward"] = 0
+				h["spindle.reverse"] = 0
+				ctx.spindleStop.startDuty()
 	if h["spindle.runs-bwd"]:
 		cncc.setSpindleState(-1)
 	elif h["spindle.runs-fwd"]:
