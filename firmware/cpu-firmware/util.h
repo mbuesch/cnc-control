@@ -148,18 +148,18 @@ uint8_t hexdigit_to_ascii(uint8_t digit);
 
 
 /* Smart program memory read */
-#define pgm_read(ptr)	({					\
-		typeof(*(ptr)) *_pgm_ptr = (ptr);		\
-		typeof(*(ptr)) _pgm_ret;			\
-		if (sizeof(*_pgm_ptr) == 1)			\
-			_pgm_ret = pgm_read_byte(_pgm_ptr);	\
-		else if (sizeof(*_pgm_ptr) == 2)		\
-			_pgm_ret = pgm_read_word(_pgm_ptr);	\
-		else if (sizeof(*_pgm_ptr) == 4)		\
-			_pgm_ret = pgm_read_dword(_pgm_ptr);	\
-		else						\
-			_pgm_read_invalid_type_size();		\
-		_pgm_ret;					\
+#define pgm_read(ptr)	({						\
+		typeof(*(ptr)) *_pgm_ptr = (ptr);			\
+		uint32_t _pgm_ret;					\
+		if (sizeof(*_pgm_ptr) == 1)				\
+			_pgm_ret = (uint8_t)pgm_read_byte(_pgm_ptr);	\
+		else if (sizeof(*_pgm_ptr) == 2)			\
+			_pgm_ret = (uint16_t)pgm_read_word(_pgm_ptr);	\
+		else if (sizeof(*_pgm_ptr) == 4)			\
+			_pgm_ret = (uint32_t)pgm_read_dword(_pgm_ptr);	\
+		else							\
+			_pgm_read_invalid_type_size();			\
+		_pgm_ret;						\
 	})
 extern void _pgm_read_invalid_type_size(void);
 

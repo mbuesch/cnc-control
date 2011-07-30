@@ -1,7 +1,7 @@
 """
  *   Tiny USB stack - Descriptor table generator
  *
- *   Copyright (C) 2009 Michael Buesch <m@bues.ch>
+ *   Copyright (C) 2009-2011 Michael Buesch <m@bues.ch>
  *
  *   This program is free software; you can redistribute it and/or
  *   modify it under the terms of the GNU General Public License
@@ -82,9 +82,15 @@ USB_ENDPOINT_MAX_ADJUSTABLE	= 0x80
 class Descriptor(object):
 	STRDESC = 0xFF
 
-	def __init__(self):
+	def __init__(self, parentDevice=None):
+		self.parentDevice = parentDevice
 		self.attributes = {}
 		self.index = 0
+
+	def getParentDevice(self):
+		if self.parentDevice:
+			return self.parentDevice
+		return self
 
 	@staticmethod
 	def name2type(name):
@@ -99,16 +105,28 @@ class Descriptor(object):
 			return 8
 		raise Exception("Could not determine type from name '%s'" % name)
 
+	def __createValue(self, name, value):
+		if self.name2type(name) == Descriptor.STRDESC:
+			sd = StringDescriptor(value)
+			self.getParentDevice().addStringDescriptor(sd)
+			return sd
+		return value
+
+	def __destroyValue(self, name, value):
+		if self.name2type(name) == Descriptor.STRDESC:
+			self.getParentDevice().removeStringDescriptor(value)
+
 	def alloc(self, name, value):
 		if name in self.attributes:
 			raise Exception("Attribute " + name + " double allocation")
-		self.attributes[name] = [self.index, value]
+		self.attributes[name] = [self.index, self.__createValue(name, value)]
 		self.index += 1
 
 	def set(self, name, value):
 		if not name in self.attributes:
 			raise Exception("Attribute " + name + " not found")
-		self.attributes[name][1] = value
+		self.__destroyValue(name, self.attributes[name][1])
+		self.attributes[name][1] = self.__createValue(name, value)
 
 	def getValue(self, name):
 		if not name in self.attributes:
@@ -124,35 +142,45 @@ class Descriptor(object):
 			l[index] = (attrName, value)
 		return l
 
-class StringDescriptor:
-	currentId = 1
-	stringDescriptorList = []
-
-	def __init__(self, string):
-		self.string = string
-		self.id = StringDescriptor.currentId
-		StringDescriptor.currentId += 1
-		StringDescriptor.stringDescriptorList.append(self)
+class StringDescriptor(object):
+	def __init__(self, string=None, ccode=None, strId=None):
+		if ccode is None:
+			ccode = []
+			uni = string.encode("UTF-16")[2:]
+			for i in range(0, len(uni), 2):
+				pfx = ""
+				if i != 0 and i % 8 == 0:
+					pfx = "\n\t"
+				ccode.append("%s0x%02X, 0x%02X" %\
+					(pfx, ord(uni[i+1]), ord(uni[i])))
+			self.ccode = ", ".join(ccode)
+			self.text = string
+		else:
+			self.ccode = ccode
+			self.text = ccode
+		self.strId = strId
 
 	def getId(self):
-		return self.id
+		return self.strId
+
+	def setId(self, strId):
+		self.strId = strId
 
 	def getText(self):
-		return self.string
+		return self.text
 
-	def getString(self):
-		ret = ""
-		for c in self.string.encode("UTF-16")[3:]:
-			ret += "\\x%02X" % ord(c)
-		return ret
-
-	def getLength(self):
-		return len(self.string) * 2
+	def getCCode(self):
+		return self.ccode
 
 class Device(Descriptor):
 	def __init__(self):
 		Descriptor.__init__(self)
 		self.configs = []
+		self.stringDescs = []
+
+		# Only one language for now
+		langSd = StringDescriptor(ccode="0x09, 0x04", strId=0) # Language ID (US)
+		self.addStringDescriptor(langSd)
 
 		self.alloc("bLength", USB_DT_DEVICE_SIZE)
 		self.alloc("bDescriptorType", USB_DT_DEVICE)
@@ -171,6 +199,20 @@ class Device(Descriptor):
 
 	def addConfiguration(self, configuration):
 		self.configs.append(configuration)
+
+	def addStringDescriptor(self, sd):
+		self.stringDescs.append(sd)
+
+	def removeStringDescriptor(self, sd):
+		self.stringDescs.remove(sd)
+
+	def __setStringDescriptorIds(self):
+		nextId = 1
+		for sd in self.stringDescs:
+			if sd.getId() is not None:
+				continue
+			sd.setId(nextId)
+			nextId += 1
 
 	def __autoConfig(self):
 		self.set("bNumConfigurations", len(self.configs))
@@ -196,7 +238,7 @@ class Device(Descriptor):
 		(name, value) = attr
 		attrType = Descriptor.name2type(name)
 		if attrType == Descriptor.STRDESC:
-			sd = StringDescriptor(value)
+			sd = value
 			value = "0x%02X, " % sd.getId()
 		elif attrType == 8:
 			value = "0x%02X, " % int(value)
@@ -222,9 +264,14 @@ class Device(Descriptor):
 		return ("".join(s), count)
 
 	def __repr__(self):
+		self.__setStringDescriptorIds()
 		self.__autoConfig()
 		s = [ "/*** THIS FILE IS GENERATED. DO NOT EDIT! ***/\n\n" ]
-		s.append("static const uint8_t PROGMEM device_descriptor[] = {\n\t")
+		s.append("struct descriptor_ptr {\n")
+		s.append("\tconst void * USB_PROGMEM ptr;\n")
+		s.append("\tuint8_t size;\n")
+		s.append("};\n\n")
+		s.append("static const uint8_t USB_PROGMEM device_descriptor[] = {\n\t")
 		(string, cnt) = self.__attrDump(self.getList())
 		s.append(string)
 		s.append("\n};\n\n")
@@ -232,7 +279,7 @@ class Device(Descriptor):
 		configNr = 0
 		for config in self.configs:
 			count = 0
-			s.append("static const uint8_t PROGMEM config%d_descriptor[] = {\n\t" % configNr)
+			s.append("static const uint8_t USB_PROGMEM config%d_descriptor[] = {\n\t" % configNr)
 			(string, cnt) = self.__attrDump(config.getList())
 			s.append(string)
 			count += cnt
@@ -259,30 +306,28 @@ class Device(Descriptor):
 			s.append("};\n\n")
 			configNr += 1
 
-		s.append("static const uint16_t PROGMEM config_descriptor_pointers[] = {\n")
+		s.append("static const struct descriptor_ptr USB_PROGMEM config_descriptor_ptrs[] = {\n")
 		for i in range(0, len(self.configs)):
-			s.append("\t(uint16_t)(void *)config%d_descriptor, sizeof(config%d_descriptor),\n" % (i, i))
+			s.append("\t{\n")
+			s.append("\t\t.ptr\t= config%d_descriptor,\n" % i)
+			s.append("\t\t.size\t= sizeof(config%d_descriptor),\n" % i)
+			s.append("\t},\n")
 		s.append("};\n\n")
 
-		# Only one language for now...
-		s.append("/* 0: Language ID (US) */\n")
-		s.append("static const char PROGMEM string0_descriptor[] = \"\\x09\\x04\";\n")
-
-		for sd in StringDescriptor.stringDescriptorList:
+		for sd in self.stringDescs:
 			s.append("\n/* %d: " % sd.getId())
 			s.append(sd.getText())
-			s.append("*/\n")
-			s.append("static const char PROGMEM string%d_descriptor[] = " % sd.getId())
-			s.append("\"%s\";\n" % sd.getString())
+			s.append(" */\n")
+			s.append("static const char USB_PROGMEM string%d_descriptor[] = {\n" % sd.getId())
+			s.append("\t%s\n};\n" % sd.getCCode())
 		s.append("\n")
 
-		s.append("static const uint16_t PROGMEM string_descriptor_pointers[] = {\n")
-		s.append("\t(uint16_t)(void *)string%d_descriptor, %d,\n" % (0, 2))
-		i = 1
-		for sd in StringDescriptor.stringDescriptorList:
-			s.append("\t(uint16_t)(void *)string%d_descriptor, %d,\n" %\
-				 (i, sd.getLength()))
-			i += 1
+		s.append("static const struct descriptor_ptr USB_PROGMEM string_descriptor_ptrs[] = {\n")
+		for sd in self.stringDescs:
+			s.append("\t{\n")
+			s.append("\t\t.ptr\t= string%d_descriptor,\n" % sd.getId())
+			s.append("\t\t.size\t= sizeof(string%d_descriptor),\n" % sd.getId())
+			s.append("\t},\n")
 		s.append("};\n\n")
 
 		return "".join(s)
@@ -292,7 +337,7 @@ class Device(Descriptor):
 
 class Configuration(Descriptor):
 	def __init__(self, device):
-		Descriptor.__init__(self)
+		Descriptor.__init__(self, device)
 		self.device = device
 		device.addConfiguration(self)
 		self.interfaces = []
@@ -311,7 +356,7 @@ class Configuration(Descriptor):
 
 class Interface(Descriptor):
 	def __init__(self, configuration):
-		Descriptor.__init__(self)
+		Descriptor.__init__(self, configuration.getParentDevice())
 		self.configuration = configuration
 		configuration.addInterface(self)
 		self.endpoints = []
@@ -337,7 +382,7 @@ class Interface(Descriptor):
 
 class Endpoint(Descriptor):
 	def __init__(self, interface):
-		Descriptor.__init__(self)
+		Descriptor.__init__(self, interface.getParentDevice())
 		self.interface = interface
 		interface.addEndpoint(self)
 
@@ -350,7 +395,7 @@ class Endpoint(Descriptor):
 
 class HIDDevice(Descriptor):
 	def __init__(self, interface):
-		Descriptor.__init__(self)
+		Descriptor.__init__(self, interface.getParentDevice())
 		self.interface = interface
 		interface.addHIDDevice(self)
 

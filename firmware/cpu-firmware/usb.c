@@ -76,50 +76,50 @@ static uint8_t create_device_descriptor(void *buf)
 {
 	DBG(usb_printstr("USB: Requested device descriptor"));
 
-	memcpy_P(buf, &device_descriptor, sizeof(device_descriptor));
+	usb_copy_from_pgm(buf, &device_descriptor, sizeof(device_descriptor));
 
 	return sizeof(device_descriptor);
 }
 
 static uint8_t create_config_descriptor(void *buf, uint8_t index)
 {
-	uint8_t * PROGMEM ptr;
-	uint8_t len;
+	const uint8_t * USB_PROGMEM ptr;
+	uint8_t size;
 
 	DBG(usb_print1num("USB: Requested config descriptor", index));
 
-	if (index >= ARRAY_SIZE(config_descriptor_pointers)) {
+	if (index >= ARRAY_SIZE(config_descriptor_ptrs)) {
 		usb_printstr("USB: Get config descriptor index out of range");
 		return 0xFF;
 	}
 
-	ptr = (void *)pgm_read_word(&config_descriptor_pointers[index * 2 + 0]);
-	len = pgm_read_word(&config_descriptor_pointers[index * 2 + 1]);
+	ptr = (void *)(uintptr_t)usb_pgm_read(&config_descriptor_ptrs[index].ptr);
+	size = usb_pgm_read(&config_descriptor_ptrs[index].size);
 
-	memcpy_P(buf, ptr, len);
+	usb_copy_from_pgm(buf, ptr, size);
 
-	return len;
+	return size;
 }
 
 static uint8_t create_string_descriptor(void *buf, uint8_t index)
 {
 	struct usb_string_descriptor *s = buf;
-	const prog_char *string;
-	uint8_t len;
+	const char * USB_PROGMEM string;
+	uint8_t size;
 
 	DBG(usb_print1num("USB: Requested string descriptor", index));
 
-	if (index >= ARRAY_SIZE(string_descriptor_pointers)) {
+	if (index >= ARRAY_SIZE(string_descriptor_ptrs)) {
 		usb_printstr("USB: Get string descriptor index out of range");
 		return 0xFF;
 	}
 
-	string = (void *)pgm_read_word(&string_descriptor_pointers[index * 2 + 0]);
-	len = pgm_read_word(&string_descriptor_pointers[index * 2 + 1]);
+	string = (void *)(uintptr_t)usb_pgm_read(&string_descriptor_ptrs[index].ptr);
+	size = usb_pgm_read(&string_descriptor_ptrs[index].size);
 
-	s->bLength = 2 + len;
+	s->bLength = 2 + size;
 	s->bDescriptorType = USB_DT_STRING;
-	memcpy_P(s->string, string, len);
+	usb_copy_from_pgm(s->string, string, size);
 
 	return s->bLength;
 }
@@ -130,7 +130,7 @@ static uint8_t usb_set_configuration(uint8_t bConfigurationValue)
 
 	if (bConfigurationValue) {
 		/* Select a configuration */
-		if (bConfigurationValue - 1 >= ARRAY_SIZE(config_descriptor_pointers)) {
+		if (bConfigurationValue - 1 >= ARRAY_SIZE(config_descriptor_ptrs)) {
 			usb_printstr("USB: Invalid bConfigurationValue");
 			return 1;
 		}

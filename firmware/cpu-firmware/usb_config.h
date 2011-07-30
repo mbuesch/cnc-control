@@ -55,6 +55,10 @@
  * Set to 0 for LittleEndian. */
 #define USBCFG_ARCH_BE		0
 
+/* Architecture program memory annotations and access */
+#define USB_PROGMEM			PROGMEM
+#define usb_pgm_read(addr)		pgm_read(addr)
+#define usb_copy_from_pgm(t, s, l)	memcpy_P(t, s, l)
 
 /* Endpoint configuration */
 #if USB_MINI
