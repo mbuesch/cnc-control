@@ -2,7 +2,7 @@
 #define MAIN_H_
 
 #define VERSION_MAJOR	0
-#define VERSION_MINOR	9
+#define VERSION_MINOR	1
 
 /* CPU frequency */
 #define CPU_HZ			16000000

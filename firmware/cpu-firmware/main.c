@@ -978,6 +978,7 @@ int main(void)
 	lcd_init();
 	lcd_printf("CNC-Control %u.%u\nInitializing",
 		   VERSION_MAJOR, VERSION_MINOR);
+	lcd_commit();
 	extports_init();
 	coprocessor_init();
 	override_init();
