@@ -169,7 +169,7 @@ install_eeprom: all
 	 -c $(PROGRAMMER) -P $(PROGPORT) \
 	 -U eeprom:w:$(APP_EEP)
 
-install: install_flash install_eeprom
+install: install_flash
 
 boot-app: all
 	$(ADMIN_TOOL) --enterboot
