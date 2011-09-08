@@ -246,6 +246,7 @@ def eventloop(h, cncc):
 		try:
 			if not cncc.probe():
 				time.sleep(1)
+				continue
 
 			deviceInitialize(h, cncc)
 			while 1: # Event loop

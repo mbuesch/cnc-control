@@ -695,6 +695,7 @@ class CNCControl:
 	def __deviceUnplug(self):
 		if self.deviceAvailable:
 			self.deviceAvailable = False
+			CNCCException.info("device disconnected")
 
 	def __usbError(self, usbException):
 		self.__deviceUnplug()
