@@ -240,16 +240,24 @@ def createPins(h):
 	# Program control
 	h.newpin("program.stop", HAL_BIT, HAL_OUT)
 
+def checkEMC():
+	try:
+		os.stat("/tmp/emc.lock")
+	except (OSError), e:
+		print "CNC-Control: EMC2 doesn't seem to be running"
+		raise KeyboardInterrupt
+	return True
+
 def eventloop(h, cncc):
 	ctx = Context(h, cncc)
-	while 1:
+	while checkEMC():
 		try:
 			if not cncc.probe():
-				time.sleep(1)
+				time.sleep(0.3)
 				continue
 
 			deviceInitialize(h, cncc)
-			while 1: # Event loop
+			while checkEMC(): # Event loop
 				if not cncc.eventWait():
 					break
 				updatePins(ctx)
@@ -271,6 +279,7 @@ def main():
 		print "CNC-Control exception: " + str(e)
 		return 1
 	except (KeyboardInterrupt), e:
+		print "CNC-Control shutdown"
 		return 0
 
 if __name__ == "__main__":
