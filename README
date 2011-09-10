@@ -20,15 +20,21 @@ HALFILE = cnccontrol.hal
 to the end of the [HAL] section of your .ini file. Add the new HALFILE line
 below any exitsing HALFILE line.
 
-To install the HAL driver, just copy it somewhere you can execute files from.
-We suggest to just copy the driver to the EMC2 configuration directory as well:
-cp -a driver/{cnccontrol_driver.py,emc2hal_cnccontrol} /MY/EMC2/CONFIG/DIRECTORY/
-After that you need to adjust your PATH environment variable to include
-the EMC2 config directory (or the directory where you put the files).
-
-As the CNC-Control HAL driver has to access the CNC-Control USB device, either
-startup EMC as root, or configure your USB device permissions (udev) to allow
-binding the userspace USB driver as restricted user to the device.
+To install the HAL driver, just go to the "driver" subdirectory and run the
+    make
+    sudo -i         # become root
+    make install
+commands. This will install the driver. It will also install a sudo script
+to /etc/sudoers.d/zzz-cnccontrol, which is required for the driver to have
+access permissions to the USB device.
+Note that "sudo" needs to be installed on the system and support for the
+/etc/sudoers.d/ directory must available.
+If sudo is not installed, install it with
+    aptitude install sudo
+If your system does not support the sudoers.d directory, you need to manually
+adjust your suoders file. In most cases you just need to append the
+contents of the zzz-cnccontrol file to your /etc/sudoers file. Use visudo
+to edit the sudoers file.
 
 All configuration of the CNC-Control device can be done through the
 cnccontrol.hal file. Just look into the file and read the comments.
