@@ -52,11 +52,11 @@ def crc8Buf(crc, iterable):
 class CNCCException(Exception):
 	@classmethod
 	def info(cls, message):
-		print "CNC Control:", message
+		print "CNC-Control:", message
 
 	@classmethod
 	def warn(cls, message):
-		print "CNC Control WARNING:", message
+		print "CNC-Control WARNING:", message
 
 	@classmethod
 	def error(cls, message):
