@@ -276,10 +276,10 @@ def main():
 		h.ready()
 		eventloop(h, cncc)
 	except (CNCCException), e:
-		print "CNC-Control exception: " + str(e)
+		print "CNC-Control: exception: " + str(e)
 		return 1
 	except (KeyboardInterrupt), e:
-		print "CNC-Control shutdown"
+		print "CNC-Control: shutdown"
 		return 0
 
 if __name__ == "__main__":
