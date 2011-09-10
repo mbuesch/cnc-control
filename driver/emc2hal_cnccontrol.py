@@ -266,10 +266,10 @@ def eventloop(h, cncc):
 
 def main():
 	try:
-#		try:
-#			os.nice(-15)
-#		except (OSError), e:
-#			print "WARNING: Failed to renice cnccontrol HAL module:", str(e)
+		try:
+			os.nice(-5)
+		except (OSError), e:
+			print "WARNING: Failed to renice cnccontrol HAL module:", str(e)
 		h = hal.component("cnccontrol")
 		createPins(h)
 		cncc = CNCControl(verbose=True)
