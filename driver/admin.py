@@ -150,7 +150,7 @@ def handle_enterboot(context, arg):
 	# Enter coprocessor bootloader
 	msg = ControlMsgEnterboot(ControlMsg.TARGET_COPROC,
 				  hdrFlags=ControlMsg.CONTROL_FLG_BOOTLOADER)
-	reply = cncc.controlMsgSyncReply(msg, timeout=1000)
+	reply = cncc.controlMsgSyncReply(msg, timeoutMs=1000)
 	if not reply.isOK():
 		raise CNCCException("Failed to enter coprocessor bootloader: %s" % str(reply))
 
@@ -161,7 +161,7 @@ def handle_exitboot(context, arg):
 		return
 	# Exit coprocessor bootloader
 	msg = ControlMsgExitboot(ControlMsg.TARGET_COPROC)
-	reply = cncc.controlMsgSyncReply(msg, timeout=1000)
+	reply = cncc.controlMsgSyncReply(msg, timeoutMs=1000)
 	if not reply.isOK():
 		print "Failed to exit coprocessor bootloader: %s" % str(reply)
 	# Exit CPU bootloader
@@ -187,7 +187,7 @@ def __flashImage(context, ihexfile, offset, size, pageSize, targetMCU):
 				raise CNCCException("Failed to write image data to "
 					"flash buffer: %s" % str(reply))
 		msg = ControlMsgBootFlashpg(pageAddr, targetMCU)
-		reply = cncc.controlMsgSyncReply(msg, timeout=2500)
+		reply = cncc.controlMsgSyncReply(msg, timeoutMs=2500)
 		if not reply.isOK():
 			raise CNCCException("Failed to flash page: %s" % str(reply))
 
