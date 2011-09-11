@@ -709,13 +709,13 @@ class CNCControl:
 
 	def eventWait(self, timeout=50):
 		if not self.deviceAvailable:
-			return False
+			self.__deviceUnplugException()
 		try:
 			data = self.usbh.interruptRead(EP_IRQ, ControlIrq.MAX_SIZE,
 						       timeout)
 		except (usb.USBError), e:
 			if not e.errno:
-				return True
+				return False # Timeout. No event.
 			self.__usbError(e)
 		if not data:
 			self.__deviceUnplugException("Zero length event")
@@ -800,7 +800,7 @@ class CNCControl:
 
 	def setTwohandEnabled(self, enable):
 		if not self.deviceAvailable:
-			return
+			self.__deviceUnplugException()
 		flg = 0
 		if enable:
 			flg = ControlMsgDevflags.DEVICE_FLG_TWOHANDEN
@@ -811,7 +811,7 @@ class CNCControl:
 
 	def setIncrementAtIndex(self, index, increment):
 		if not self.deviceAvailable:
-			return
+			self.__deviceUnplugException()
 		if equal(increment, 0.0):
 			increment = FixPt(0)
 		msg = ControlMsgSetincrement(increment, index)
@@ -823,7 +823,7 @@ class CNCControl:
 	def setDebugging(self, debugLevel, usbMessages):
 		# 0 => disabled, 1 => enabled, 2 => verbose
 		if not self.deviceAvailable:
-			return
+			self.__deviceUnplugException()
 		flg = ControlMsgDevflags.DEVICE_FLG_NODEBUG
 		if debugLevel >= 1:
 			flg &= ~ControlMsgDevflags.DEVICE_FLG_NODEBUG
@@ -842,7 +842,7 @@ class CNCControl:
 	def setEstopState(self, asserted):
 		# Send the estop state to the device
 		if not self.deviceAvailable:
-			return
+			self.__deviceUnplugException()
 		if asserted == self.estop:
 			return # No change
 		msg = ControlMsgEstopupdate(asserted)
@@ -853,12 +853,12 @@ class CNCControl:
 
 	def deviceIsTurnedOn(self):
 		if not self.deviceAvailable:
-			return False
+			self.__deviceUnplugException()
 		return self.deviceIsOn
 
 	def haveMotionHaltRequest(self):
 		if not self.deviceAvailable:
-			return False
+			self.__deviceUnplugException()
 		halt = self.motionHaltRequest
 		self.motionHaltRequest = False
 		return halt
@@ -866,12 +866,12 @@ class CNCControl:
 	def getSpindleCommand(self):
 		# Returns -1, 0 or 1 for reverse, stop or forward.
 		if not self.deviceAvailable:
-			return 0
+			self.__deviceUnplugException()
 		return self.spindleCommand
 
 	def setSpindleState(self, direction):
 		if not self.deviceAvailable:
-			return
+			self.__deviceUnplugException()
 		if self.spindleState == direction:
 			return
 		self.spindleState = direction
@@ -888,7 +888,7 @@ class CNCControl:
 	def getFeedOverrideState(self, minValue, maxValue):
 		# Returns override state in percent (float)
 		if not self.deviceAvailable:
-			return 0
+			self.__deviceUnplugException()
 		inRange = 256
 		outRange = maxValue - minValue
 		mult = outRange / inRange
@@ -897,7 +897,7 @@ class CNCControl:
 	def setFeedOverrideState(self, percent):
 		# Sends the current FO percentage state to the device
 		if not self.deviceAvailable:
-			return
+			self.__deviceUnplugException()
 		if self.feedOverridePercent == percent:
 			return # No change
 		msg = ControlMsgFoupdate(int(round(percent)))
@@ -909,7 +909,7 @@ class CNCControl:
 	def setAxisPosition(self, axis, position):
 		# Update axis position on device
 		if not self.deviceAvailable:
-			return
+			self.__deviceUnplugException()
 		pos = FixPt(position)
 		if pos != self.axisPositions[axis]:
 			self.axisPositions[axis] = pos
@@ -928,7 +928,7 @@ class CNCControl:
 	def setEnabledAxes(self, axes):
 		# Set the enabled axes.
 		if not self.deviceAvailable:
-			return
+			self.__deviceUnplugException()
 		mask = 0
 		for ax in axes:
 			mask |= (1 << AXIS2NUMBER[ax])
@@ -940,7 +940,7 @@ class CNCControl:
 	def getJogState(self, axis):
 		# Returns (direction, incremental, velocity)
 		if not self.deviceAvailable:
-			return (0, False, 0)
+			self.__deviceUnplugException()
 		state = self.jogStates[axis]
 		(direction, incremental, velocity) = state.get()
 		retval = (direction.floatval,

@@ -251,8 +251,8 @@ def checkEMC():
 def eventLoop(ctx):
 	while checkEMC():
 		try:
-			if not ctx.cncc.eventWait():
-				break
+			ctx.cncc.eventWait()
+			# Update pins, even if we didn't receive an event.
 			updatePins(ctx)
 		except (CNCCFatal), e:
 			raise # Drop out of event loop and re-probe device.
