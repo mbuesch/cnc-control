@@ -198,6 +198,7 @@ def createPins(h):
 	# Device config
 	h.newparam("config.twohand", HAL_BIT, HAL_RW)
 	h.newparam("config.debug", HAL_U32, HAL_RW)
+	h.newparam("config.debugperf", HAL_BIT, HAL_RW)
 	h.newparam("config.usblogmsg", HAL_BIT, HAL_RW)
 
 	# Machine state
@@ -249,7 +250,12 @@ def checkEMC():
 	return True
 
 def eventLoop(ctx):
+	avgRuntime = 0
+	lastRuntimePrint = -1
+	timeDebug = bool(ctx.h["config.debugperf"])
 	while checkEMC():
+		if timeDebug:
+			start = datetime.now()
 		try:
 			ctx.cncc.eventWait()
 			# Update pins, even if we didn't receive an event.
@@ -258,6 +264,13 @@ def eventLoop(ctx):
 			raise # Drop out of event loop and re-probe device.
 		except (CNCCException), e:
 			print "CNC-Control error: " + str(e)
+		if timeDebug:
+			runtime = (datetime.now() - start).microseconds
+			avgRuntime = (avgRuntime + runtime) // 2
+			if start.second != lastRuntimePrint:
+				lastRuntimePrint = start.second
+				print "Average event loop runtime = %.1f milliseconds" %\
+					(float(avgRuntime) / 1000)
 
 def probeLoop(h):
 	cncc = CNCControl(verbose=True)

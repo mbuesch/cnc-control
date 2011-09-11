@@ -647,10 +647,10 @@ class CNCControl:
 				self.deviceIsOn = True
 		return True
 
-	def reconnect(self, timeout=15):
+	def reconnect(self, timeoutSec=15):
 		if not self.deviceAvailable:
 			return False
-		timeout = datetime.now() + timedelta(seconds=timeout)
+		timeout = datetime.now() + timedelta(seconds=timeoutSec)
 		self.__deviceUnplug()
 		while timeout > datetime.now():
 			try:
@@ -707,12 +707,12 @@ class CNCControl:
 	def __usbError(self, usbException):
 		CNCCException.error("USB error: " + str(usbException))
 
-	def eventWait(self, timeout=50):
+	def eventWait(self, timeoutMs=25):
 		if not self.deviceAvailable:
 			self.__deviceUnplugException()
 		try:
 			data = self.usbh.interruptRead(EP_IRQ, ControlIrq.MAX_SIZE,
-						       timeout)
+						       timeoutMs)
 		except (usb.USBError), e:
 			if not e.errno:
 				return False # Timeout. No event.
@@ -770,29 +770,29 @@ class CNCControl:
 		else:
 			CNCCException.warn("Unhandled IRQ: " + str(irq))
 
-	def controlMsg(self, msg, timeout=300):
+	def controlMsg(self, msg, timeoutMs=300):
 		try:
 			msg.setSeqno(self.messageSequenceNumber)
 			self.messageSequenceNumber = (self.messageSequenceNumber + 1) & 0xFF
 
 			rawData = msg.getRaw()
-			size = self.usbh.bulkWrite(EP_OUT, rawData, timeout)
+			size = self.usbh.bulkWrite(EP_OUT, rawData, timeoutMs)
 			if len(rawData) != size:
 				CNCCException.error("Only wrote %d bytes of %d bytes "
 					"bulk write" % (size, len(rawData)))
 		except (usb.USBError), e:
 			self.__usbError(e)
 
-	def controlReply(self, timeout=300):
+	def controlReply(self, timeoutMs=300):
 		try:
-			data = self.usbh.bulkRead(EP_IN, ControlReply.MAX_SIZE, timeout)
+			data = self.usbh.bulkRead(EP_IN, ControlReply.MAX_SIZE, timeoutMs)
 		except (usb.USBError), e:
 			self.__usbError(e)
 		return ControlReply.parseRaw(data)
 
-	def controlMsgSyncReply(self, msg, timeout=300):
-		self.controlMsg(msg, timeout)
-		reply = self.controlReply(timeout)
+	def controlMsgSyncReply(self, msg, timeoutMs=300):
+		self.controlMsg(msg, timeoutMs)
+		reply = self.controlReply(timeoutMs)
 		if msg.seqno != reply.seqno:
 			CNCCException.error("Got invalid reply sequence number: %d vs %d" %\
 				(msg.seqno, reply.seqno))

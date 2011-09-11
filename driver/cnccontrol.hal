@@ -9,6 +9,7 @@ loadusr -Wn cnccontrol emc2hal_cnccontrol
 # --- Device config ---
 setp	cnccontrol.config.twohand			1 # "two-hand" button enabled?
 setp	cnccontrol.config.debug				0 # Device debug (0=off, 1=on, 2=verbose)
+setp    cnccontrol.config.debugperf                     0 # Performance monitoring (0=off, 1=on)
 setp	cnccontrol.config.usblogmsg			0 # Send device debug messages through USB
 
 # --- Machine state ---
