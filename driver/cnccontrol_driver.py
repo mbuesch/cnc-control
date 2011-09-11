@@ -649,6 +649,9 @@ class CNCControl:
 			CNCCException.error("Failed to read device flags")
 		self.__interpretDevFlags(reply.value)
 
+	def deviceAppPing(self):
+		return self.controlMsgSyncReply(ControlMsgPing()).isOK()
+
 	def reconnect(self, timeoutSec=15):
 		if not self.deviceAvailable:
 			return False

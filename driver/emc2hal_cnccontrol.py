@@ -264,14 +264,24 @@ def checkEMC():
 		raise KeyboardInterrupt
 	return True
 
+def pingDevice(ctx):
+	for i in range(0, 3):
+		if ctx.cncc.deviceAppPing():
+			break
+	else:
+		CNCCFatal.error("Failed to ping the device")
+
 def eventLoop(ctx):
 	avgRuntime = 0
 	lastRuntimePrint = -1
+	lastPing = -1
 	timeDebug = bool(ctx.h["config.debugperf"])
 	while checkEMC():
-		if timeDebug:
-			start = datetime.now()
+		start = datetime.now()
 		try:
+			if start.second != lastPing:
+				lastPing = start.second
+				pingDevice(ctx)
 			ctx.cncc.eventWait()
 			# Update pins, even if we didn't receive an event.
 			updatePins(ctx)
