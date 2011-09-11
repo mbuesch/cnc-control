@@ -62,6 +62,9 @@ class CNCCException(Exception):
 	def error(cls, message):
 		raise cls(message)
 
+class CNCCFatal(CNCCException):
+	pass
+
 class FixPt:
 	FIXPT_FRAC_BITS		= 16
 
@@ -697,8 +700,11 @@ class CNCControl:
 			self.deviceAvailable = False
 			CNCCException.info("device disconnected")
 
-	def __usbError(self, usbException):
+	def __deviceUnplugException(self, message):
 		self.__deviceUnplug()
+		CNCCFatal.error(message)
+
+	def __usbError(self, usbException):
 		CNCCException.error("USB error: " + str(usbException))
 
 	def eventWait(self, timeout=50):
@@ -711,6 +717,8 @@ class CNCControl:
 			if not e.errno:
 				return True
 			self.__usbError(e)
+		if not data:
+			self.__deviceUnplugException("Zero length event")
 		self.__handleInterrupt(data)
 		return True
 

@@ -248,21 +248,32 @@ def checkEMC():
 		raise KeyboardInterrupt
 	return True
 
-def eventloop(h, cncc):
+def eventLoop(ctx):
+	while checkEMC():
+		try:
+			if not ctx.cncc.eventWait():
+				break
+			updatePins(ctx)
+		except (CNCCFatal), e:
+			raise # Drop out of event loop and re-probe device.
+		except (CNCCException), e:
+			print "CNC-Control error: " + str(e)
+
+def probeLoop(h):
+	cncc = CNCControl(verbose=True)
+	h.ready()
 	ctx = Context(h, cncc)
 	while checkEMC():
 		try:
-			if not cncc.probe():
-				time.sleep(0.3)
-				continue
-
-			deviceInitialize(h, cncc)
-			while checkEMC(): # Event loop
-				if not cncc.eventWait():
-					break
-				updatePins(ctx)
+			if cncc.probe():
+				deviceInitialize(h, cncc)
+				eventLoop(ctx)
+			else:
+				time.sleep(0.2)
+		except (CNCCFatal), e:
+			print "CNC-Control fatal error: " + str(e)
 		except (CNCCException), e:
-			print "CNC-Control exception: " + str(e)
+			print "CNC-Control error: " + str(e)
 
 def main():
 	try:
@@ -272,11 +283,9 @@ def main():
 			print "WARNING: Failed to renice cnccontrol HAL module:", str(e)
 		h = hal.component("cnccontrol")
 		createPins(h)
-		cncc = CNCControl(verbose=True)
-		h.ready()
-		eventloop(h, cncc)
+		probeLoop(h)
 	except (CNCCException), e:
-		print "CNC-Control: exception: " + str(e)
+		print "CNC-Control: Unhandled exception: " + str(e)
 		return 1
 	except (KeyboardInterrupt), e:
 		print "CNC-Control: shutdown"
