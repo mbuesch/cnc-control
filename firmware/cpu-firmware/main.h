@@ -48,7 +48,7 @@ static inline jiffies_t get_jiffies(void)
 #define BTN_SPINDLE		(1ul << 1)	/* Spindle on/off */
 #define BTN_AXIS_NEXT		(1ul << 2)	/* Select next axis */
 #define BTN_AXIS_PREV		(1ul << 3)	/* Select previous axis */
-#define BTN_RESERVED		(1ul << 4)
+#define BTN_TOGGLE		(1ul << 4)	/* Generic toggle button */
 #define BTN_TWOHAND		(1ul << 5)	/* Twohand security switch */
 #define BTN_JOG_POSITIVE	(1ul << 6)	/* JOG + */
 #define BTN_JOG_RAPID		(1ul << 7)	/* Rapid JOG */
@@ -67,7 +67,7 @@ static inline jiffies_t get_jiffies(void)
 #define EXT_LED_SPINDLE		EXTPORT(0, 1)
 #define EXT_LED_AXIS_NEXT	EXTPORT(0, 2)
 #define EXT_LED_AXIS_PREV	EXTPORT(0, 3)
-#define EXT_LED_RESERVED	EXTPORT(0, 4)
+#define EXT_LED_TOGGLE		EXTPORT(0, 4)
 #define EXT_LED_TWOHAND		EXTPORT(0, 5)
 #define EXT_LED_JOGPOS		EXTPORT(0, 6)
 #define EXT_LED_JOGRAPID	EXTPORT(0, 7)

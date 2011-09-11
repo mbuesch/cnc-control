@@ -370,6 +370,8 @@ static void do_update_lcd(void)
 		irq_restore(sreg);
 
 		lcd_put_char(get_axis_name(axis));
+		if (devflags & DEVICE_FLG_G53COORDS)
+			lcd_put_char('@');
 		lcd_printf(FIXPT_FMT3, FIXPT_ARG3(pos));
 		break;
 	}
@@ -388,11 +390,9 @@ static void do_update_lcd(void)
 		lcd_printf("i" FIXPT_FMT3, FIXPT_ARG3(current_increment()));
 		break;
 	case SK1_DEVSTATE:
-		lcd_cursor(0, 9);
-		lcd_printf("%3d%%", state.fo_feedback_percent);
-		lcd_put_char(state.rapid ? 'R' : '-');
-		lcd_put_char(state.jog != JOG_STOPPED ? 'J' : '-');
-		lcd_put_char(spindle_is_on() ? 'S' : '-');
+		lcd_cursor(0, 11);
+		lcd_put_char(state.jog != JOG_STOPPED ? 'J' : ' ');
+		lcd_printf("%d%%", state.fo_feedback_percent);
 		break;
 	default:
 		BUG_ON(1);
@@ -487,6 +487,20 @@ static void update_leds(void)
 	else
 		_extports_clear(ext, EXT_LED_ONOFF);
 
+	switch (state.softkey[0]) {
+	case SK0_AXISPOS:
+		if (devflags & DEVICE_FLG_G53COORDS)
+			_extports_set(ext, EXT_LED_TOGGLE);
+		else
+			_extports_clear(ext, EXT_LED_TOGGLE);
+		break;
+	case SK0_VELOCITY:
+		_extports_clear(ext, EXT_LED_TOGGLE);
+		break;
+	default:
+		BUG_ON(1);
+	}
+
 	if (extports != ext) {
 		extports = ext;
 		extports_commit();
@@ -505,13 +519,13 @@ static void interpret_one_softkey(bool sk, uint8_t index, uint8_t count)
 	if (sk_state >= count)
 		sk_state = 0;
 	state.softkey[index] = sk_state;
-	state.lcd_need_update = 1;
 }
 
 static void interpret_softkeys(bool sk0, bool sk1)
 {
 	interpret_one_softkey(sk0, 0, NR_SK0_STATES);
 	interpret_one_softkey(sk1, 1, NR_SK1_STATES);
+	update_userinterface();
 }
 
 static void set_jog_keepalife_deadline(void)
@@ -804,6 +818,26 @@ static void interpret_buttons(void)
 	/* Jogwheel. Only if not jogging via buttons. */
 	if (state.jog == JOG_STOPPED)
 		interpret_jogwheel(jogwheel, rising_edge(BTN_ENCPUSH));
+
+	/* Togglebutton */
+	if (rising_edge(BTN_TOGGLE)) {
+		switch (state.softkey[0]) {
+		case SK0_AXISPOS:
+			if (devflag_is_set(DEVICE_FLG_G53COORDS)) {
+				modify_devflags(DEVICE_FLG_G53COORDS,
+						0);
+			} else {
+				modify_devflags(DEVICE_FLG_G53COORDS,
+						DEVICE_FLG_G53COORDS);
+			}
+			update_userinterface();
+			break;
+		case SK0_VELOCITY:
+			break;
+		default:
+			BUG_ON(1);
+		}
+	}
 
 	prev_buttons = buttons;
 #undef rising_edge

@@ -103,7 +103,7 @@ class Context:
 	def getCNCC(self):
 		if not self.cncc:
 			self.cncc = CNCControl()
-			if not self.cncc.probe(sendInit=False):
+			if not self.cncc.probe():
 				raise CNCCException("Did not find CNC "
 					"Control device on USB bus")
 		return self.cncc

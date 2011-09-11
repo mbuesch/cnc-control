@@ -9,6 +9,7 @@
 
 import sys
 import usb
+import errno
 import time
 from datetime import datetime, timedelta
 
@@ -611,7 +612,7 @@ class CNCControl:
 			CNCCException.error("Failed to ping the bootloader: %s" % str(reply))
 		CNCCException.error("Unknown PING error")
 
-	def probe(self, sendInit=True):
+	def probe(self):
 		if self.deviceAvailable:
 			return True
 		self.__initializeData()
@@ -620,9 +621,10 @@ class CNCControl:
 			if not self.usbdev:
 				return False
 
+			time.sleep(0.1)
 			self.usbh = self.usbdev.open()
 			self.usbh.reset()
-			time.sleep(0.1)
+			time.sleep(0.2)
 			config = self.usbdev.configurations[0]
 			interface = config.interfaces[0][0]
 
@@ -633,18 +635,19 @@ class CNCControl:
 			self.__epClearHalt(interface, EP_OUT)
 			self.__epClearHalt(interface, EP_IRQ)
 		except (usb.USBError), e:
-			self.__usbError(e)
+			self.__usbError(e, fatal=True)
 		self.__devicePlug()
-
-		if sendInit and not self.deviceRunsBootloader():
-			reply = self.controlMsgSyncReply(ControlMsgReset())
-			if not reply.isOK():
-				CNCCException.error("Failed to reset the device state")
-			reply = self.controlMsgSyncReply(ControlMsgDevflags(0, 0))
-			if not reply.isOK():
-				CNCCException.error("Failed to read device flags")
-			self.__interpretDevFlags(reply.value)
 		return True
+
+	def deviceReset(self):
+		self.__initializeData()
+		reply = self.controlMsgSyncReply(ControlMsgReset())
+		if not reply.isOK():
+			CNCCException.error("Failed to reset the device state")
+		reply = self.controlMsgSyncReply(ControlMsgDevflags(0, 0))
+		if not reply.isOK():
+			CNCCException.error("Failed to read device flags")
+		self.__interpretDevFlags(reply.value)
 
 	def reconnect(self, timeoutSec=15):
 		if not self.deviceAvailable:
@@ -715,8 +718,12 @@ class CNCControl:
 		self.__deviceUnplug()
 		CNCCFatal.error(message)
 
-	def __usbError(self, usbException):
-		CNCCException.error("USB error: " + str(usbException))
+	def __usbError(self, usbException, fatal=False):
+		if usbException.errno == errno.ENODEV or\
+		   str(usbException).lower().find("no such device") >= 0:
+			self.__deviceUnplugException("Unplug exception")
+		cls = CNCCFatal if fatal else CNCCException
+		cls.error("USB error: " + str(usbException))
 
 	def eventWait(self, timeoutMs=25):
 		if not self.deviceAvailable:

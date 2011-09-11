@@ -196,6 +196,7 @@ def updatePins(ctx):
 
 def deviceInitialize(h, cncc):
 	# CNC-Control USB device connected. Initialize it.
+	cncc.deviceReset()
 	cncc.setDebugging(h["config.debug"], h["config.usblogmsg"])
 	cncc.setTwohandEnabled(h["config.twohand"])
 	for i in range(0, ControlMsgSetincrement.MAX_INDEX + 1):
