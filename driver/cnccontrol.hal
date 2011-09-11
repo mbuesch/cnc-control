@@ -13,8 +13,11 @@ setp    cnccontrol.config.debugperf                     0 # Performance monitori
 setp	cnccontrol.config.usblogmsg			0 # Send device debug messages through USB
 
 # --- Machine state ---
-net	cncc-on		halui.machine.is-on		=> cnccontrol.machine.is-on
-net	cncc-estop	halui.estop.is-activated	=> cnccontrol.machine.estop-active
+net	cncc-on		halui.machine.is-on		=> cnccontrol.machine.on
+net	cncc-estop	halui.estop.is-activated	=> cnccontrol.machine.estop.active
+net	cncc-jog	halui.mode.is-manual		=> cnccontrol.machine.mode.jog
+net	cncc-mdi	halui.mode.is-mdi		=> cnccontrol.machine.mode.mdi
+net	cncc-auto	halui.mode.is-auto		=> cnccontrol.machine.mode.auto
 
 # --- Axis enable/disable ---
 setp	cnccontrol.axis.x.enable			1

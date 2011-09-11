@@ -98,8 +98,8 @@ def updatePins(ctx):
 	h = ctx.h
 	cncc = ctx.cncc
 
-	cncc.setEstopState(h["machine.estop-active"])
-	if not h["machine.is-on"] or\
+	cncc.setEstopState(h["machine.estop.active"])
+	if not h["machine.on"] or\
 	   not cncc.deviceIsTurnedOn():
 		return
 
@@ -110,7 +110,8 @@ def updatePins(ctx):
 
 	# Update master spindle state
 	if ctx.spindleStart.update() and\
-	   ctx.spindleStop.update():
+	   ctx.spindleStop.update() and\
+	   h["machine.mode.jog"]:
 		direction = cncc.getSpindleCommand()
 		if direction < 0: # backward
 			if not h["spindle.runs-bwd"]:
@@ -156,6 +157,10 @@ def updatePins(ctx):
 	for ax in jogParams:
 		ctx.incJogPlus[ax].update()
 		ctx.incJogMinus[ax].update()
+		if not h["machine.mode.jog"]:
+			h["jog.%s.minus" % ax] = 0
+			h["jog.%s.plus" % ax] = 0
+			continue
 		(direction, incremental) = jogParams[ax]
 		if incremental and not equal(direction, 0.0):
 			h["jog.%s.minus" % ax] = 0
@@ -202,8 +207,11 @@ def createPins(h):
 	h.newparam("config.usblogmsg", HAL_BIT, HAL_RW)
 
 	# Machine state
-	h.newpin("machine.is-on", HAL_BIT, HAL_IN)
-	h.newpin("machine.estop-active", HAL_BIT, HAL_IN)
+	h.newpin("machine.on", HAL_BIT, HAL_IN)
+	h.newpin("machine.estop.active", HAL_BIT, HAL_IN)
+	h.newpin("machine.mode.jog", HAL_BIT, HAL_IN)
+	h.newpin("machine.mode.mdi", HAL_BIT, HAL_IN)
+	h.newpin("machine.mode.auto", HAL_BIT, HAL_IN)
 
 	# Axis
 	for ax in ALL_AXES:
