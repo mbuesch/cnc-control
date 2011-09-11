@@ -155,6 +155,8 @@ enum device_flags {
 	DEVICE_FLG_ON		= (1ul << 2), /* The CNC Control device is turned on */
 	DEVICE_FLG_TWOHANDEN	= (1ul << 3), /* Twohand switch enabled */
 	DEVICE_FLG_USBLOGMSG	= (1ul << 4), /* Send debug messages through USB */
+	DEVICE_FLG_G53COORDS	= (1ul << 5), /* Use machine coordinates */
+	//FIXME set G53COORDS flag
 };
 
 enum enterboot_magic {

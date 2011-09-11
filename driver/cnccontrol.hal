@@ -31,9 +31,12 @@ setp	cnccontrol.axis.b.enable			0
 setp	cnccontrol.axis.c.enable			0
 
 # --- Axis position feedback ---
-net	cncc-xpos	halui.axis.0.pos-feedback	=> cnccontrol.axis.x.pos
-net	cncc-ypos	halui.axis.1.pos-feedback	=> cnccontrol.axis.y.pos
-net	cncc-zpos	halui.axis.2.pos-feedback	=> cnccontrol.axis.z.pos
+net	cncc-xposma	halui.axis.0.pos-feedback	=> cnccontrol.axis.x.pos.machine-coords
+net	cncc-xposus	halui.axis.0.pos-relative	=> cnccontrol.axis.x.pos.user-coords
+net	cncc-yposma	halui.axis.1.pos-feedback	=> cnccontrol.axis.y.pos.machine-coords
+net	cncc-yposus	halui.axis.1.pos-relative	=> cnccontrol.axis.y.pos.user-coords
+net	cncc-zposma	halui.axis.2.pos-feedback	=> cnccontrol.axis.z.pos.machine-coords
+net	cncc-zposus	halui.axis.2.pos-relative	=> cnccontrol.axis.z.pos.user-coords
 # If more axes are enabled, connect pins here.
 
 # --- Jogging ---

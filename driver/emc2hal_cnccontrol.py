@@ -184,10 +184,15 @@ def updatePins(ctx):
 				h["jog.%s.plus" % ax] = 0
 
 	# Update axis states
+	g53coords = cncc.wantG53Coords()
 	for ax in ALL_AXES:
 		if not h["axis.%s.enable" % ax]:
 			continue
-		cncc.setAxisPosition(ax, h["axis.%s.pos" % ax])
+		if g53coords:
+			pos = h["axis.%s.pos.machine-coords" % ax]
+		else:
+			pos = h["axis.%s.pos.user-coords" % ax]
+		cncc.setAxisPosition(ax, pos)
 
 def deviceInitialize(h, cncc):
 	# CNC-Control USB device connected. Initialize it.
@@ -216,7 +221,8 @@ def createPins(h):
 	# Axis
 	for ax in ALL_AXES:
 		h.newparam("axis.%s.enable" % ax, HAL_BIT, HAL_RW)
-		h.newpin("axis.%s.pos" % ax, HAL_FLOAT, HAL_IN)
+		h.newpin("axis.%s.pos.machine-coords" % ax, HAL_FLOAT, HAL_IN)
+		h.newpin("axis.%s.pos.user-coords" % ax, HAL_FLOAT, HAL_IN)
 
 	# Jogging
 	h.newpin("jog.velocity", HAL_FLOAT, HAL_OUT)

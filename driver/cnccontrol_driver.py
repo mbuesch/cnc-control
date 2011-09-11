@@ -161,6 +161,7 @@ class ControlMsgDevflags(ControlMsg):
 	DEVICE_FLG_ON		= (1 << 2)
 	DEVICE_FLG_TWOHANDEN	= (1 << 3)
 	DEVICE_FLG_USBLOGMSG	= (1 << 4)
+	DEVICE_FLG_G53COORDS	= (1 << 5)
 
 	def __init__(self, devFlagsMask, devFlagsSet, hdrFlags=0, hdrSeqno=0):
 		ControlMsg.__init__(self, ControlMsg.CONTROL_DEVFLAGS,
@@ -642,9 +643,7 @@ class CNCControl:
 			reply = self.controlMsgSyncReply(ControlMsgDevflags(0, 0))
 			if not reply.isOK():
 				CNCCException.error("Failed to read device flags")
-			devFlags = reply.value
-			if devFlags & ControlMsgDevflags.DEVICE_FLG_ON:
-				self.deviceIsOn = True
+			self.__interpretDevFlags(reply.value)
 		return True
 
 	def reconnect(self, timeoutSec=15):
@@ -664,6 +663,7 @@ class CNCControl:
 	def __initializeData(self):
 		self.messageSequenceNumber = 0
 		self.deviceIsOn = False
+		self.g53coords = False
 		self.estop = False
 		self.motionHaltRequest = False
 		self.axisPositions = { }
@@ -680,6 +680,17 @@ class CNCControl:
 		self.spindleState = 0
 		self.feedOverridePercent = 0
 		self.logMsgBuf = ""
+
+	def __interpretDevFlags(self, devFlags):
+		if devFlags & ControlMsgDevflags.DEVICE_FLG_ON:
+			if not self.deviceIsOn:
+				CNCCException.info("turned ON")
+				self.deviceIsOn = True
+		else:
+			if self.deviceIsOn:
+				CNCCException.info("turned OFF")
+				self.deviceIsOn = False
+		self.g53coords = bool(devFlags & ControlMsgDevflags.DEVICE_FLG_G53COORDS)
 
 	@staticmethod
 	def __findDevice(idVendor, idProduct):
@@ -749,12 +760,7 @@ class CNCControl:
 		elif irq.id == ControlIrq.IRQ_FEEDOVERRIDE:
 			self.foState = irq.state
 		elif irq.id == ControlIrq.IRQ_DEVFLAGS:
-			if irq.devFlags & ControlMsgDevflags.DEVICE_FLG_ON:
-				CNCCException.info("turned ON")
-				self.deviceIsOn = True
-			else:
-				CNCCException.info("turned OFF")
-				self.deviceIsOn = False
+			self.__interpretDevFlags(irq.devFlags)
 		elif irq.id == ControlIrq.IRQ_HALT:
 			self.motionHaltRequest = True
 			for jogState in self.jogStates.values():
@@ -924,6 +930,9 @@ class CNCControl:
 				CNCCException.error("Axis update failed: %s" % str(reply))
 			self.axisPosUpdatePending[axis] = False
 			self.lastAxisPosUpdate[axis] = now
+
+	def wantG53Coords(self):
+		return self.g53coords
 
 	def setEnabledAxes(self, axes):
 		# Set the enabled axes.
