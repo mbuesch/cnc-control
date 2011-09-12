@@ -94,6 +94,32 @@ class ValueBalance:
 		else:
 			self.incBit.startDuty()
 
+def resetOutputPins(ctx):
+	h = ctx.h
+
+	# Jogging
+	h["jog.velocity"] = 0
+	for ax in ALL_AXES:
+		h["jog.%s.minus" % ax] = 0
+		h["jog.%s.plus" % ax] = 0
+		h["jog.%s.inc" % ax] = 0
+		h["jog.%s.inc-plus" % ax] = 0
+		h["jog.%s.inc-minus" % ax] = 0
+
+	# Master spindle
+	h["spindle.forward"] = 0
+	h["spindle.reverse"] = 0
+	h["spindle.start"] = 0
+	h["spindle.stop"] = 0
+
+	# Feed override
+	h["feed-override.dec"] = 0
+	h["feed-override.inc"] = 0
+	h["feed-override.scale"] = 0
+
+	# Program control
+	h["program.stop"] = 0
+
 def updatePins(ctx):
 	h = ctx.h
 	cncc = ctx.cncc
@@ -101,6 +127,7 @@ def updatePins(ctx):
 	cncc.setEstopState(h["machine.estop.active"])
 	if not h["machine.on"] or\
 	   not cncc.deviceIsTurnedOn():
+		resetOutputPins(ctx)
 		return
 
 	# Halt the program, if requested
@@ -301,6 +328,7 @@ def probeLoop(h):
 	cncc = CNCControl(verbose=True)
 	h.ready()
 	ctx = Context(h, cncc)
+	resetOutputPins(ctx)
 	while checkEMC():
 		try:
 			if cncc.probe():
@@ -312,6 +340,7 @@ def probeLoop(h):
 			print "CNC-Control fatal error: " + str(e)
 		except (CNCCException), e:
 			print "CNC-Control error: " + str(e)
+		resetOutputPins(ctx)
 
 def main():
 	try:
