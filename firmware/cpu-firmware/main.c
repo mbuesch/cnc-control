@@ -928,6 +928,9 @@ bool set_increment_at_index(uint8_t index, fixpt_t increment)
 {
 	if (index >= ARRAY_SIZE(state.increments))
 		return 0;
+	if (fixpt_is_neg(increment) ||
+	    increment > FLOAT_TO_FIXPT(9.999))
+		return 0;
 
 	state.increments[index] = increment;
 	if (state.increments[state.increment_index] == INT32_TO_FIXPT(0))

@@ -40,7 +40,7 @@ net	cncc-zposus	halui.axis.2.pos-relative	=> cnccontrol.axis.z.pos.user-coords
 # If more axes are enabled, connect pins here.
 
 # --- Jogging ---
-setp	cnccontrol.jog.velocity-rapid			20000	# "rapid" move velocity
+setp	cnccontrol.jog.velocity-rapid			60000	# "rapid" move velocity
 setp	cnccontrol.jog.increment.0			0.001	# 1st selectable increment
 setp	cnccontrol.jog.increment.1			0.01	# 2nd selectable increment
 setp	cnccontrol.jog.increment.2			0.1	# 3rd selectable increment

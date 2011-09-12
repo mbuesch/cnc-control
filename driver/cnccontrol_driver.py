@@ -68,6 +68,10 @@ class CNCCFatal(CNCCException):
 
 class FixPt:
 	FIXPT_FRAC_BITS		= 16
+	MIN_INT_LIMIT		= -(1 << (FIXPT_FRAC_BITS - 1))
+	MIN_LIMIT		= float(MIN_INT_LIMIT) - 0.99999
+	MAX_INT_LIMIT		= (1 << (FIXPT_FRAC_BITS - 1)) - 1
+	MAX_LIMIT		= float(MAX_INT_LIMIT) + 0.99999
 
 	def __init__(self, val):
 		if isinstance(val, FixPt):
@@ -75,11 +79,13 @@ class FixPt:
 			self.floatval = val.floatval
 			return
 		if type(val) == float:
+			self.assertRepresentable(val)
 			raw = (int(val * float(1 << self.FIXPT_FRAC_BITS)) + 1) & 0xFFFFFFFF
 			self.raw = self.__int2raw(raw)
 			self.floatval = val
 			return
 		if type(val) == int:
+			self.assertRepresentable(val)
 			self.raw = self.__int2raw(val << self.FIXPT_FRAC_BITS)
 			self.floatval = float(val)
 			return
@@ -90,6 +96,20 @@ class FixPt:
 			self.floatval = round(float(raw) / float(1 << self.FIXPT_FRAC_BITS), 4)
 		except (TypeError, IndexError), e:
 			CNCCException.error("FixPt TypeError")
+
+	@classmethod
+	def representable(cls, val):
+		# Returns true, if the integer part is representable by FixPt
+		ival = int(val)
+		return ival > cls.MIN_INT_LIMIT if ival < 0 else\
+		       ival < cls.MAX_INT_LIMIT
+
+	@classmethod
+	def assertRepresentable(cls, val):
+		if cls.representable(val):
+			return
+		CNCCException.error("FixPt: Value %s is not representable" %\
+				    str(val))
 
 	@staticmethod
 	def __int2raw(val):
@@ -238,7 +258,8 @@ class ControlMsgEstopupdate(ControlMsg):
 		return raw
 
 class ControlMsgSetincrement(ControlMsg):
-	MAX_INDEX = 5
+	MAX_INDEX	= 5
+	MAX_INC_FLOAT	= 9.999
 
 	def __init__(self, increment, index, hdrFlags=0, hdrSeqno=0):
 		ControlMsg.__init__(self, ControlMsg.CONTROL_SETINCREMENT,
@@ -828,6 +849,13 @@ class CNCControl:
 	def setIncrementAtIndex(self, index, increment):
 		if not self.deviceAvailable:
 			self.__deviceUnplugException()
+		increment = float(increment)
+		if increment < 0.0:
+			CNCCFatal.error("Invalid negative JOG increment %f at index %d" %\
+				(increment, index))
+		if increment > ControlMsgSetincrement.MAX_INC_FLOAT:
+			CNCCFatal.error("JOG increment %f at index %d is too big. Max = %f" %\
+				(increment, index, ControlMsgSetincrement.MAX_INC_FLOAT))
 		if equal(increment, 0.0):
 			increment = FixPt(0)
 		msg = ControlMsgSetincrement(increment, index)
