@@ -1,3 +1,4 @@
 #!/bin/sh
 set -e
-exec sudo -n /usr/local/bin/emc2hal_cnccontrol.py
+sudo -n -h 2>&1 | head -n1 | grep -q -e 'illegal option' && opt_n= || opt_n="-n"
+exec sudo $opt_n /usr/local/bin/emc2hal_cnccontrol.py
