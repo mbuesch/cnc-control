@@ -130,6 +130,9 @@ class FixPt:
 	def __ne__(self, other):
 		return self.raw != other.raw
 
+	def isNegative(self):
+		return bool(self.raw[3] & 0x80)
+
 class ControlMsg:
 	# IDs
 	CONTROL_PING			= 0
@@ -266,6 +269,12 @@ class ControlMsgSetincrement(ControlMsg):
 				    hdrFlags, hdrSeqno)
 		self.increment = FixPt(increment)
 		self.index = index
+		if self.increment.isNegative():
+			CNCCFatal.error("Invalid negative JOG increment %f at index %d" %\
+				(self.increment.floatval, index))
+		if increment > ControlMsgSetincrement.MAX_INC_FLOAT:
+			CNCCFatal.error("JOG increment %f at index %d is too big. Max = %f" %\
+				(increment, index, ControlMsgSetincrement.MAX_INC_FLOAT))
 
 	def getRaw(self):
 		raw = ControlMsg.getRaw(self)
@@ -849,13 +858,6 @@ class CNCControl:
 	def setIncrementAtIndex(self, index, increment):
 		if not self.deviceAvailable:
 			self.__deviceUnplugException()
-		increment = float(increment)
-		if increment < 0.0:
-			CNCCFatal.error("Invalid negative JOG increment %f at index %d" %\
-				(increment, index))
-		if increment > ControlMsgSetincrement.MAX_INC_FLOAT:
-			CNCCFatal.error("JOG increment %f at index %d is too big. Max = %f" %\
-				(increment, index, ControlMsgSetincrement.MAX_INC_FLOAT))
 		if equal(increment, 0.0):
 			increment = FixPt(0)
 		msg = ControlMsgSetincrement(increment, index)
