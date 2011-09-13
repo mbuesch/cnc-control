@@ -19,6 +19,9 @@ from cnccontrol_driver import *
 
 
 class BitPoke:
+	IDLE	= 0
+	DUTY	= 1
+
 	def __init__(self, h, pin, cycleMsec=3):
 		self.h = h
 		self.pin = pin
@@ -30,7 +33,7 @@ class BitPoke:
 		self.timeout = now + timedelta(0, 0, self.cycleMsec * 1000)
 
 	def update(self):
-		# Returns True, if idle
+		# Returns DUTY or IDLE
 		now = datetime.now()
 		if self.h[self.pin]:
 			if now >= self.timeout:
@@ -38,8 +41,8 @@ class BitPoke:
 				self.__updateTimeout(now)
 		else:
 			if now >= self.timeout:
-				return True
-		return False
+				return BitPoke.IDLE
+		return BitPoke.DUTY
 
 	def startDuty(self):
 		self.h[self.pin] = 1
@@ -58,8 +61,8 @@ class ValueBalance:
 		self.feedbackPin = feedbackPin
 
 	def balance(self, targetValue):
-		if not self.incBit.update() or\
-		   not self.decBit.update():
+		if self.incBit.update() != BitPoke.IDLE or\
+		   self.decBit.update() != BitPoke.IDLE:
 			return
 		value = self.h[self.feedbackPin]
 		if equal(value, targetValue):
@@ -218,8 +221,8 @@ class CNCControlHAL(CNCControl):
 		self.programStop.update()
 
 		# Update master spindle state
-		if self.spindleStart.update() and\
-		   self.spindleStop.update() and\
+		if self.spindleStart.update() == BitPoke.IDLE and\
+		   self.spindleStop.update() == BitPoke.IDLE and\
 		   h["machine.mode.jog"]:
 			direction = self.getSpindleCommand()
 			if direction < 0: # backward
