@@ -66,7 +66,7 @@ class CNCCException(Exception):
 class CNCCFatal(CNCCException):
 	pass
 
-class FixPt:
+class FixPt(object):
 	FIXPT_FRAC_BITS		= 16
 	MIN_INT_LIMIT		= -(1 << (FIXPT_FRAC_BITS - 1))
 	MIN_LIMIT		= float(MIN_INT_LIMIT) - 0.99999
@@ -133,7 +133,7 @@ class FixPt:
 	def isNegative(self):
 		return bool(self.raw[3] & 0x80)
 
-class ControlMsg:
+class ControlMsg(object):
 	# IDs
 	CONTROL_PING			= 0
 	CONTROL_RESET			= 1
@@ -272,9 +272,9 @@ class ControlMsgSetincrement(ControlMsg):
 		if self.increment.isNegative():
 			CNCCFatal.error("Invalid negative JOG increment %f at index %d" %\
 				(self.increment.floatval, index))
-		if increment > ControlMsgSetincrement.MAX_INC_FLOAT:
+		if self.increment.floatval > ControlMsgSetincrement.MAX_INC_FLOAT:
 			CNCCFatal.error("JOG increment %f at index %d is too big. Max = %f" %\
-				(increment, index, ControlMsgSetincrement.MAX_INC_FLOAT))
+				(self.increment.floatval, index, ControlMsgSetincrement.MAX_INC_FLOAT))
 
 	def getRaw(self):
 		raw = ControlMsg.getRaw(self)
@@ -352,7 +352,7 @@ class ControlMsgBootFlashpg(ControlMsg):
 		raw.append(self.target & 0xFF)
 		return raw
 
-class ControlReply:
+class ControlReply(object):
 	MAX_SIZE		= 6
 
 	# IDs
@@ -450,7 +450,7 @@ class ControlReplyVal16(ControlReply):
 	def isOK(self):
 		return True
 
-class ControlIrq:
+class ControlIrq(object):
 	MAX_SIZE		= 14
 
 	# IDs
@@ -579,7 +579,7 @@ class ControlIrqLogmsg(ControlIrq):
 	def __repr__(self):
 		return "LOGMSG interrupt (nr%d)" % (self.seqno)
 
-class JogState:
+class JogState(object):
 	KEEPALIFE_TIMEOUT = 0.3
 	STOPDATA = (FixPt(0.0), False, FixPt(0.0))
 
@@ -608,7 +608,7 @@ class JogState:
 		self.__timeout = datetime.now() +\
 			timedelta(seconds=self.KEEPALIFE_TIMEOUT)
 
-class CNCControl:
+class CNCControl(object):
 	def __init__(self, verbose=False):
 		self.deviceAvailable = False
 		self.verbose = verbose

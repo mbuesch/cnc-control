@@ -42,7 +42,7 @@ def arg2bool(arg):
 		pass
 	return False
 
-class IHEXParser:
+class IHEXParser(object):
 	TYPE_DATA = 0
 	TYPE_EOF  = 1
 	TYPE_ESAR = 2
@@ -96,7 +96,7 @@ class IHEXParser:
 			raise CNCCException("Failed to read file %s: %s" % (ihexfile, str(e)))
 		self.image = image
 
-class Context:
+class Context(object):
 	def __init__(self):
 		self.cncc = None
 
