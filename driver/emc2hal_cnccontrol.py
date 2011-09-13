@@ -18,46 +18,53 @@ from hal import HAL_IN, HAL_OUT, HAL_RO, HAL_RW
 from cnccontrol_driver import *
 
 
-class BitPoke:
+class Timekeeping(object):
+	def __init__(self):
+		self.update()
+
+	def update(self):
+		self.now = datetime.now()
+
+class BitPoke(object):
 	IDLE	= 0
 	DUTY	= 1
 
-	def __init__(self, h, pin, cycleMsec=3):
+	def __init__(self, h, tk, pin, cycleMsec=3):
 		self.h = h
+		self.tk = tk
 		self.pin = pin
-		self.timeout = datetime.now()
+		self.timeout = tk.now
 		self.cycleMsec = cycleMsec
 		h[pin] = 0
 
-	def __updateTimeout(self, now):
-		self.timeout = now + timedelta(0, 0, self.cycleMsec * 1000)
+	def __updateTimeout(self):
+		self.timeout = self.tk.now + timedelta(0, 0, self.cycleMsec * 1000)
 
 	def update(self):
 		# Returns DUTY or IDLE
-		now = datetime.now()
 		if self.h[self.pin]:
-			if now >= self.timeout:
+			if self.tk.now >= self.timeout:
 				self.h[self.pin] = 0
-				self.__updateTimeout(now)
+				self.__updateTimeout()
 		else:
-			if now >= self.timeout:
+			if self.tk.now >= self.timeout:
 				return BitPoke.IDLE
 		return BitPoke.DUTY
 
 	def startDuty(self):
 		self.h[self.pin] = 1
-		self.__updateTimeout(datetime.now())
+		self.__updateTimeout()
 
 	def state(self):
 		return self.h[self.pin]
 
-class ValueBalance:
-	def __init__(self, h,
+class ValueBalance(object):
+	def __init__(self, h, tk,
 		     scalePin, incPin, decPin, feedbackPin):
 		self.h = h
 		self.scalePin = scalePin
-		self.incBit = BitPoke(h, incPin)
-		self.decBit = BitPoke(h, decPin)
+		self.incBit = BitPoke(h, tk, incPin)
+		self.decBit = BitPoke(h, tk, decPin)
 		self.feedbackPin = feedbackPin
 
 	def balance(self, targetValue):
@@ -79,11 +86,13 @@ class CNCControlHAL(CNCControl):
 	def __init__(self, halName="cnccontrol"):
 		CNCControl.__init__(self, verbose=True)
 
+		self.tk = Timekeeping()
+
 		self.h = hal.component(halName)
 		self.__createHalPins()
 		self.h.ready()
 
-		self.foBalance = ValueBalance(self.h,
+		self.foBalance = ValueBalance(self.h, self.tk,
 				scalePin="feed-override.scale",
 				incPin="feed-override.inc",
 				decPin="feed-override.dec",
@@ -92,13 +101,16 @@ class CNCControlHAL(CNCControl):
 		self.incJogPlus = {}
 		self.incJogMinus = {}
 		for ax in ALL_AXES:
-			self.incJogPlus[ax] = BitPoke(self.h, "jog.%s.inc-plus" % ax)
-			self.incJogMinus[ax] = BitPoke(self.h, "jog.%s.inc-minus" % ax)
+			self.incJogPlus[ax] = BitPoke(self.h, self.tk,
+						      "jog.%s.inc-plus" % ax)
+			self.incJogMinus[ax] = BitPoke(self.h, self.tk,
+						       "jog.%s.inc-minus" % ax)
 
-		self.programStop = BitPoke(self.h, "program.stop", cycleMsec=100)
+		self.programStop = BitPoke(self.h, self.tk,
+					   "program.stop", cycleMsec=100)
 
-		self.spindleStart = BitPoke(self.h, "spindle.start")
-		self.spindleStop = BitPoke(self.h, "spindle.stop")
+		self.spindleStart = BitPoke(self.h, self.tk, "spindle.start")
+		self.spindleStop = BitPoke(self.h, self.tk, "spindle.stop")
 
 	def __checkEMC(self):
 		try:
@@ -312,12 +324,14 @@ class CNCControlHAL(CNCControl):
 		lastPing = -1
 		timeDebug = bool(self.h["config.debugperf"])
 		while self.__checkEMC():
-			start = datetime.now()
+			self.tk.update()
+			start = self.tk.now
 			try:
 				if start.second != lastPing:
 					lastPing = start.second
 					self.__pingDevice()
 				self.eventWait()
+				self.tk.update()
 				# Update pins, even if we didn't receive an event.
 				self.__updatePins()
 			except (CNCCFatal), e:
@@ -326,7 +340,8 @@ class CNCControlHAL(CNCControl):
 				print "CNC-Control error: " + str(e)
 			if not timeDebug:
 				continue
-			runtime = (datetime.now() - start).microseconds
+			self.tk.update()
+			runtime = (self.tk.now - start).microseconds
 			avgRuntime = (avgRuntime + runtime) // 2
 			if start.second != lastRuntimePrint:
 				lastRuntimePrint = start.second
