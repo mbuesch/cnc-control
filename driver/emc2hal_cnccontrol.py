@@ -19,7 +19,7 @@ from cnccontrol_driver import *
 
 
 class BitPoke:
-	def __init__(self, h, pin, cycleMsec=15):
+	def __init__(self, h, pin, cycleMsec=3):
 		self.h = h
 		self.pin = pin
 		self.timeout = datetime.now()
