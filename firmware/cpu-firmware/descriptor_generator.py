@@ -146,13 +146,13 @@ class StringDescriptor(object):
 	def __init__(self, string=None, ccode=None, strId=None):
 		if ccode is None:
 			ccode = []
-			uni = string.encode("UTF-16")[2:]
+			uni = string.encode("UTF-16-LE")
 			for i in range(0, len(uni), 2):
 				pfx = ""
 				if i != 0 and i % 8 == 0:
 					pfx = "\n\t"
 				ccode.append("%s0x%02X, 0x%02X" %\
-					(pfx, ord(uni[i+1]), ord(uni[i])))
+					(pfx, ord(uni[i]), ord(uni[i+1])))
 			self.ccode = ", ".join(ccode)
 			self.text = string
 		else:
