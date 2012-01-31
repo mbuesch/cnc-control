@@ -15,6 +15,9 @@ static inline void tlist_init(struct tiny_list *list)
 	list->next = list;
 }
 
+#define TLIST_INITIALIZER(l)	{ (l).prev = &(l), (l).next = &(l), }
+#define TLIST(l)		struct tiny_list l = TLIST_INITIALIZER(l)
+
 static inline bool tlist_is_empty(struct tiny_list *list)
 {
 	return list->next == list;
@@ -28,18 +31,44 @@ static inline void tlist_add_tail(struct tiny_list *e, struct tiny_list *list)
 	e->next = list;
 }
 
+static inline void tlist_add_head(struct tiny_list *e, struct tiny_list *list)
+{
+	e->next = list->next;
+	list->next->prev = e;
+	list->next = e;
+	e->prev = list;
+}
+
 static inline void tlist_del(struct tiny_list *e)
 {
 	e->next->prev = e->prev;
 	e->prev->next = e->next;
-	e->prev = e;
-	e->next = e;
+	tlist_init(e);
 }
 
 static inline void tlist_move_tail(struct tiny_list *e, struct tiny_list *list)
 {
 	tlist_del(e);
 	tlist_add_tail(e, list);
+}
+
+static inline void tlist_move_head(struct tiny_list *e, struct tiny_list *list)
+{
+	tlist_del(e);
+	tlist_add_head(e, list);
+}
+
+static inline void tlist_relocate(struct tiny_list *from, struct tiny_list *to)
+{
+	if (tlist_is_empty(from)) {
+		tlist_init(to);
+	} else {
+		to->next = from->next;
+		to->prev = from->prev;
+		to->next->prev = to;
+		to->prev->next = to;
+	}
+	tlist_init(from);
 }
 
 #define tlist_entry(p, type, member)	container_of(p, type, member)
