@@ -76,7 +76,7 @@ uint8_t hexdigit_to_ascii(uint8_t digit)
 }
 
 #ifndef IN_BOOT
-void do_panic(const prog_char *msg)
+void do_panic(const char PROGPTR *msg)
 {
 	irq_disable();
 

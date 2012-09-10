@@ -1,7 +1,7 @@
 #ifndef UART_DRIVER_H_
 #define UART_DRIVER_H_
 
-#include <avr/pgmspace.h>
+#include "util.h"
 
 
 /* UART port baud rate */
@@ -10,7 +10,7 @@
 
 
 void uart_putchar(char c);
-void _uart_putstr(const prog_char *pstr);
+void _uart_putstr(const char PROGPTR *pstr);
 #define uart_putstr(str)	_uart_putstr(PSTR(str))
 void uart_puthex(uint8_t val);
 

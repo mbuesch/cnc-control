@@ -9,7 +9,7 @@
 
 void debug_init(void);
 
-void do_debug_printf(const prog_char *fmt, ...);
+void do_debug_printf(const char PROGPTR *fmt, ...);
 
 #define _debug_printf(pfmt, ...)	do {				\
 		if (debug_enabled())					\

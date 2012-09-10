@@ -99,7 +99,7 @@ static extports_t extports;
 
 static char get_axis_name(uint8_t axis)
 {
-	static prog_char names[] = {
+	static const char PROGMEM names[] = {
 		'X', 'Y', 'Z', 'U', 'V', 'W', 'A', 'B', 'C',
 	};
 

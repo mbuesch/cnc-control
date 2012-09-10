@@ -1,6 +1,8 @@
 #ifndef HD44780_LCD_H_
 #define HD44780_LCD_H_
 
+#include "util.h"
+
 #include <stdint.h>
 #include <avr/pgmspace.h>
 
@@ -17,10 +19,10 @@ void lcd_init(void);
 
 void lcd_put_char(char c);
 
-void _lcd_printf(const prog_char *fmt, ...);
+void _lcd_printf(const char PROGPTR *fmt, ...);
 #define lcd_printf(fmt, ...)	_lcd_printf(PSTR(fmt) ,##__VA_ARGS__)
 
-void _lcd_put_pstr(const prog_char *str);
+void _lcd_put_pstr(const char PROGPTR *str);
 #define lcd_put_pstr(str)	_lcd_put_pstr(PSTR(str))
 
 void lcd_clear_buffer(void);

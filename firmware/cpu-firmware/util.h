@@ -1,8 +1,6 @@
 #ifndef MY_UTIL_H_
 #define MY_UTIL_H_
 
-#include "uart.h"
-
 #include <stdint.h>
 #include <avr/eeprom.h>
 #include <avr/interrupt.h>
@@ -35,6 +33,8 @@
 
 #define BIT(nr)			(1ull << (nr))
 
+/* Progmem pointer annotation. */
+#define PROGPTR			/* progmem pointer */
 
 /* Memory barrier.
  * The CPU doesn't have runtime reordering, so we just
@@ -76,7 +76,7 @@ extern void _ATOMIC_STORE_invalid_size(void); /* Linker error helper */
 #define stringify(x)		__stringify(x)
 
 /* Assertions */
-void do_panic(const prog_char *msg) __attribute__((noreturn));
+void do_panic(const char PROGPTR *msg) __attribute__((noreturn));
 #define panic(string_literal)	do_panic(PSTR(string_literal))
 #define BUILD_BUG_ON(x)		((void)sizeof(char[1 - 2 * !!(x)]))
 #define BUG_ON(x)					\

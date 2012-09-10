@@ -124,7 +124,7 @@ static int lcd_stream_putchar(char c, FILE *unused)
 
 static FILE lcd_fstream = FDEV_SETUP_STREAM(lcd_stream_putchar, NULL, _FDEV_SETUP_WRITE);
 
-void _lcd_printf(const prog_char *_fmt, ...)
+void _lcd_printf(const char PROGPTR *_fmt, ...)
 {
 	char fmt[64];
 	va_list args;
@@ -135,7 +135,7 @@ void _lcd_printf(const prog_char *_fmt, ...)
 	va_end(args);
 }
 
-void _lcd_put_pstr(const prog_char *str)
+void _lcd_put_pstr(const char PROGPTR *str)
 {
 	uint8_t c;
 

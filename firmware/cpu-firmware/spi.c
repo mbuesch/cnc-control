@@ -37,7 +37,7 @@ static void spi_transfer_async(void)
 	uint8_t txbyte;
 
 	if (async_state.flags & SPI_ASYNC_TXPROGMEM) {
-		const prog_uint8_t *p = (const prog_uint8_t *)async_state.txbuf;
+		const uint8_t PROGPTR *p = (const uint8_t PROGPTR *)async_state.txbuf;
 		txbyte = pgm_read_byte(p);
 	} else
 		txbyte = *async_state.txbuf;

@@ -35,7 +35,7 @@ void uart_puthex(uint8_t val)
 	uart_putchar(hexdigit_to_ascii(val & 0xF));
 }
 
-void _uart_putstr(const prog_char *pstr)
+void _uart_putstr(const char PROGPTR *pstr)
 {
 	char c;
 

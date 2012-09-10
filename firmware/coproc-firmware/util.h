@@ -23,6 +23,9 @@
 
 #define BUILD_BUG_ON(x)		((void)sizeof(char[1 - 2 * !!(x)]))
 
+/* Progmem pointer annotation. */
+#define PROGPTR			/* progmem pointer */
+
 /* Memory barrier.
  * The CPU doesn't have runtime reordering, so we just
  * need a compiler memory clobber. */

@@ -208,7 +208,7 @@ static bool verify_page(uint16_t page_address)
 
 	for (i = 0; i < CPU_SPM_PAGESIZE; i++) {
 		data0 = page_buffer[i];
-		data1 = pgm_read_byte((prog_void *)(void *)(page_address + i));
+		data1 = pgm_read_byte((void PROGPTR *)(void *)(page_address + i));
 		if (data0 != data1)
 			return 0;
 	}

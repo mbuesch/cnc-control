@@ -20,7 +20,7 @@ SPARSE		= sparse
 ADMIN_TOOL	= ../../driver/admin.py
 
 DEBUG		= 0		# Debug build:  make DEBUG=1
-COMBINE		= 1		# Set to 0 to disable whole program optimization
+COMBINE		= 0		# Set to 1 to enable whole program optimization
 
 V		= @		# Verbose build:  make V=1
 C		= 0		# Sparsechecker build:  make C=1
