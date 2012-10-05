@@ -1006,7 +1006,7 @@ int main(void)
 	wdt_enable(WDTO_500MS);
 	debug_init();
 
-	GICR = (1 << INT1);
+	GICR = 0;
 	MCUCR = (0 << ISC11) | (0 << ISC10) |
 		(1 << ISC01) | (0 << ISC00);
 
@@ -1026,6 +1026,8 @@ int main(void)
 
 	irq_enable();
 	while (1) {
+		pdiusb_work();
+
 		j = get_jiffies();
 		if (time_after(j, next_ms_tick)) {
 			next_ms_tick = j + msec2jiffies(1);

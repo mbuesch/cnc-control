@@ -91,6 +91,24 @@ static inline void raw_data_delay(void)
 	nop();
 }
 
+/* Enable the PDIUSB interrupt line */
+static inline void pdiusb_interrupt_enable(void)
+{
+	GICR |= (1 << INT1);
+}
+
+/* Disable the PDIUSB interrupt line */
+static inline void pdiusb_interrupt_disable(void)
+{
+	GICR &= ~(1 << INT1);
+}
+
+/* Clear the PDIUSB interrupt line flag */
+static inline void pdiusb_interrupt_flag_clear(void)
+{
+	GIFR |= (1 << INTF1);
+}
+
 /*************************************************************************
  * END: Microcontroller dependent pin definitions                        *
  *************************************************************************/
@@ -132,6 +150,8 @@ typedef uint16_t trans_stat_t;
 static uint8_t pdiusb_buffer[PDIUSB_MAXSIZE];
 /* Suspend status */
 static uint8_t pdiusb_suspended;
+/* IRQ status */
+static uint16_t pdiusb_irq_status;
 
 
 
@@ -396,12 +416,33 @@ static void handle_irq_dmaeot(void)
 ISR(PDIUSB_IRQ_VECTOR)
 {
 	uint16_t status;
+
+	status = pdiusb_command_r16(PDIUSB_CMD_IRQSTAT);
+	if (status) {
+		pdiusb_interrupt_disable();
+		pdiusb_irq_status = status;
+	}
+}
+
+void pdiusb_work(void)
+{
+	uint16_t status;
 	trans_stat_t trans;
 	bool ok;
 	void *buf;
 	uint8_t size;
 
-	status = pdiusb_command_r16(PDIUSB_CMD_IRQSTAT);
+	/* Check status==0 without disabling IRQs first.
+	 * This might race with the interrupt handler, but it is safe.
+	 */
+	mb();
+	if (!pdiusb_irq_status)
+		return;
+
+	irq_disable();
+
+	status = pdiusb_irq_status;
+	pdiusb_irq_status = 0;
 
 	if (status & PDIUSB_IST_BUSRST)
 		handle_irq_busrst();
@@ -465,6 +506,9 @@ ISR(PDIUSB_IRQ_VECTOR)
 		}
 #endif
 	}
+
+	pdiusb_interrupt_enable();
+	irq_enable();
 }
 
 #if MCU_USES_CLKOUT
@@ -582,12 +626,17 @@ uint8_t pdiusb_init(void)
 	unstall_ep(PDIUSB_EP_CTLOUT);
 	unstall_ep(PDIUSB_EP_CTLIN);
 
+	pdiusb_interrupt_flag_clear();
+	pdiusb_interrupt_enable();
+
 	return 0;
 }
 
 void pdiusb_exit(void)
 {
 	uint8_t ep_index;
+
+	pdiusb_interrupt_disable();
 
 	for (ep_index = 0; ep_index < PDIUSB_EP_COUNT; ep_index++)
 		stall_ep(ep_index);

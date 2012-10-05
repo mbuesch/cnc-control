@@ -483,11 +483,11 @@ _mainfunc int main(void)
 	route_irqs_to_bootloader();
 
 	boot_coprocessor_init();
-	pdiusb_init();
-	GICR = (1 << INT1);
+	GICR = 0;
 	MCUCR = (0 << ISC11) | (0 << ISC10) |
 		(1 << ISC01) | (0 << ISC00);
+	pdiusb_init();
 	irq_enable();
-	while (1) {
-	}
+	while (1)
+		pdiusb_work();
 }
