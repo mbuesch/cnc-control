@@ -223,7 +223,7 @@ static void coprocessor_init(void)
 	spi_slave_select(1);
 	spi_transfer_slowsync(SPI_CONTROL_ENTERAPP);
 	spi_slave_select(0);
-	mdelay(300);
+	long_delay_ms(300);
 
 	spi_slave_select(1);
 	spi_transfer_slowsync(SPI_CONTROL_TESTAPP);
@@ -355,7 +355,7 @@ static void do_update_lcd(void)
 
 	if (ATOMIC_LOAD(state.estop)) {
 		lcd_cursor(0, 2);
-		lcd_put_pstr("ESTOP ACTIVE");
+		lcd_put_str("ESTOP ACTIVE");
 		return;
 	}
 
@@ -402,11 +402,11 @@ static void do_update_lcd(void)
 	switch (state.softkey[0]) {
 	case SK0_AXISPOS:
 		lcd_cursor(1, 0);
-		lcd_put_pstr("Vf");
+		lcd_put_str("Vf");
 		break;
 	case SK0_VELOCITY:
 		lcd_cursor(1, 0);
-		lcd_put_pstr("pos");
+		lcd_put_str("pos");
 		break;
 	default:
 		BUG_ON(1);
@@ -414,21 +414,21 @@ static void do_update_lcd(void)
 
 	if (devflags & DEVICE_FLG_ON) {
 		lcd_cursor(1, 6);
-		lcd_put_pstr("[ON]");
+		lcd_put_str("[ON]");
 	} else {
 		lcd_cursor(1, 5);
-		lcd_put_pstr("[OFF]");
+		lcd_put_str("[OFF]");
 	}
 
 	/* Right softkey label */
 	switch (state.softkey[1]) {
 	case SK1_INCREMENT:
 		lcd_cursor(1, 11);
-		lcd_put_pstr("state");
+		lcd_put_str("state");
 		break;
 	case SK1_DEVSTATE:
 		lcd_cursor(1, 12);
-		lcd_put_pstr("incr");
+		lcd_put_str("incr");
 		break;
 	default:
 		BUG_ON(1);

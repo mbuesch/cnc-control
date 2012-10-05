@@ -130,7 +130,7 @@ uint8_t spi_transfer_sync(uint8_t tx)
 
 uint8_t spi_transfer_slowsync(uint8_t tx)
 {
-	mdelay(10);
+	_delay_ms(10);
 	return spi_transfer_sync(tx);
 }
 
@@ -156,7 +156,7 @@ void spi_lowlevel_init(void)
 	       (0 << CPOL) | (0 << CPHA) |
 	       (0 << SPR0) | (1 << SPR1);
 	SPSR = 0;
-	mdelay(150);
+	long_delay_ms(150);
 	(void)SPSR; /* clear state */
 	(void)SPDR; /* clear state */
 }

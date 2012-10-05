@@ -5,6 +5,7 @@
 #include <avr/eeprom.h>
 #include <avr/interrupt.h>
 #include <avr/pgmspace.h>
+#include <util/delay.h>
 
 
 #define likely(x)		__builtin_expect(!!(x), 1)
@@ -89,9 +90,7 @@ void do_panic(const char PROGPTR *msg) __attribute__((noreturn));
 /** reboot - Reboot the device */
 void reboot(void) __attribute__((noreturn));
 
-/* Delay */
-void mdelay(uint16_t msecs);
-void udelay(uint16_t usecs);
+void long_delay_ms(uint16_t ms);
 
 /* Delay one CPU cycle */
 #undef nop

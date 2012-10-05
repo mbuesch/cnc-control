@@ -58,8 +58,8 @@ void _uart_putstr(const char PROGPTR *pstr)
 void uart_init(void)
 {
 	/* Set baud rate */
-	UBRRL = lo8((CPU_HZ / 16 / UART_BAUD) * UBRR_FACTOR);
-	UBRRH = hi8((CPU_HZ / 16 / UART_BAUD) * UBRR_FACTOR) & ~(1 << URSEL);
+	UBRRL = lo8((F_CPU / 16 / UART_BAUD) * UBRR_FACTOR);
+	UBRRH = hi8((F_CPU / 16 / UART_BAUD) * UBRR_FACTOR) & ~(1 << URSEL);
 #if UART_USE_2X
 	UCSRA = (1 << U2X);
 #endif
@@ -72,7 +72,7 @@ void uart_init(void)
 void uart_exit(void)
 {
 	while (!(UCSRA & (1 << UDRE)));
-	mdelay(10);
+	_delay_ms(10);
 	UCSRB = 0;
 	UCSRC = 0;
 	UCSRA = 0;

@@ -20,6 +20,7 @@
 
 #include <avr/io.h>
 #include <avr/interrupt.h>
+#include <avr/wdt.h>
 #include <string.h>
 
 
@@ -555,7 +556,7 @@ uint8_t pdiusb_configure_clkout(void)
 	if (chipid != PDIUSB_CHIPID)
 		return 1;
 	pdiusb_set_mode(0);
-	mdelay(10);
+	_delay_ms(10);
 
 	return 0;
 }
@@ -574,7 +575,7 @@ uint8_t pdiusb_init(void)
 
 	pdiusb_set_mode(0);
 	pdiusb_command_w8(PDIUSB_CMD_DMA, 0);
-	mdelay(50);
+	_delay_ms(50);
 	/* Enable software USB pullup */
 	pdiusb_set_mode(PDIUSB_MODE_SOFTCONN);
 
@@ -592,7 +593,8 @@ void pdiusb_exit(void)
 		stall_ep(ep_index);
 	usb_set_address(0);
 	pdiusb_set_mode(0); /* Disconnect SOFTCONN */
-	mdelay(500); /* Wait for host to handle disconnect */
+
+	long_delay_ms(500); /* Wait for host to handle disconnect */
 }
 
 /*************************************************************************

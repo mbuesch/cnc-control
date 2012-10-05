@@ -22,47 +22,13 @@
 #include <avr/wdt.h>
 
 
-void mdelay(uint16_t msecs)
+void long_delay_ms(uint16_t ms)
 {
-	uint8_t timer, i;
-
-	TCCR0 = DELAY_1MS_TIMERFREQ;
-	do {
-		/* Delay one millisecond */
-		for (i = DELAY_1MS_LOOP_TIMES; i; i--) {
-			TCNT0 = 0;
-			do {
-				timer = TCNT0;
-			} while (timer < DELAY_1MS_LOOP);
-		}
+	while (ms) {
+		_delay_ms(50);
 		wdt_reset();
-	} while (--msecs);
-	TCCR0 = 0;
-}
-
-void udelay(uint16_t usecs)
-{
-	uint8_t tmp;
-
-	__asm__ __volatile__(
-	"1:				\n"
-	"	ldi %1, %2		\n"
-	"2:				\n"
-	"	dec %1			\n"
-	"	brne 2b			\n"
-	"	dec %A3			\n"
-	"	brne 1b			\n"
-	"	cp %B3, __zero_reg__	\n"
-	"	breq 3f			\n"
-	"	dec %B3			\n"
-	"	ldi %A3, 0xFF		\n"
-	"	rjmp 1b			\n"
-	"3:				\n"
-	: "=d" (usecs),
-	  "=d" (tmp)
-	: "M" (DELAY_1US_LOOP),
-	  "0" (usecs)
-	);
+		ms = (ms >= 50) ? ms - 50 : 0;
+	}
 }
 
 uint8_t hexdigit_to_ascii(uint8_t digit)
@@ -88,7 +54,7 @@ void do_panic(const char PROGPTR *msg)
 	lcd_printf("*** PANIC :( ***\n");
 	lcd_commit();
 
-	mdelay(10000);
+	long_delay_ms(10000);
 	reboot();
 }
 

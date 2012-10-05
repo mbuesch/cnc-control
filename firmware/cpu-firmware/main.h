@@ -4,10 +4,8 @@
 #define VERSION_MAJOR	1
 #define VERSION_MINOR	0
 
-/* CPU frequency */
-#define CPU_HZ			16000000
 /* 1ms timer calibration */
-#define DELAY_1MS_TIMERFREQ	(1 << CS01) /* == CPU_HZ/8 */
+#define DELAY_1MS_TIMERFREQ	(1 << CS01) /* == F_CPU/8 */
 #define DELAY_1MS_LOOP		80
 #define DELAY_1MS_LOOP_TIMES	25
 /* 1us delayloop calibration */

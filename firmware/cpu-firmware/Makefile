@@ -50,6 +50,10 @@ LDFLAGS		=
 LFUSE	= 0xA0
 HFUSE	= 0xD8
 
+# CPU freq
+F_CPU	:= 16000000
+CFLAGS	+= -DF_CPU=$(F_CPU)
+
 # Application code
 APP_SRCS	= main.c 4094.c debug.c uart.c util.c lcd.c \
 		  override.c machine_interface.c \

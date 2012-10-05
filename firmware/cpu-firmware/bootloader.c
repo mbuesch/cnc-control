@@ -103,7 +103,7 @@ static void coprocessor_spi_busywait(void)
 
 static uint8_t coprocessor_spi_transfer(uint8_t data)
 {
-	mdelay(1);
+	_delay_ms(1);
 	coprocessor_spi_busywait();
 	return spi_transfer_sync(data);
 }
@@ -132,7 +132,7 @@ static bool coprocessor_enter_bootloader(void)
 	coprocessor_spi_transfer_nobusy(SPI_CONTROL_ENTERBOOT);
 	coprocessor_spi_transfer_nobusy(SPI_CONTROL_ENTERBOOT2);
 	spi_slave_select(0);
-	mdelay(150);
+	_delay_ms(150);
 	if (!coprocessor_is_in_application())
 		return 1;
 	return 0;
@@ -143,7 +143,7 @@ static bool coprocessor_exit_bootloader(void)
 	spi_slave_select(1);
 	coprocessor_spi_transfer_nobusy(SPI_CONTROL_ENTERAPP);
 	spi_slave_select(0);
-	mdelay(150);
+	_delay_ms(150);
 	if (coprocessor_is_in_application())
 		return 1;
 	return 0;
@@ -443,7 +443,7 @@ static bool should_enter_bootloader(void)
 	/* If PD0 (which is UART RXD) is pulled low, stay in bootloader */
 	PORTD = 0x01;
 	DDRD = 0x00;
-	mdelay(25);
+	_delay_ms(25);
 	value = PIND;
 	uart_init();
 	if (value & 0x01)

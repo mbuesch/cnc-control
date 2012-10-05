@@ -434,7 +434,7 @@ void send_interrupt_count(const struct control_interrupt *irq,
 
 			if (irqs_disabled())
 				break; /* Out of luck. */
-			mdelay(5);
+			_delay_ms(5);
 		}
 		debug_printf("Control IRQ queue overflow\n");
 
