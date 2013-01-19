@@ -724,9 +724,9 @@ static void interpret_buttons(void)
 
 	static uint16_t prev_buttons;
 
-#define rising_edge(btn)	(rising & (btn))
-#define falling_edge(btn)	(falling & (btn))
-#define pressed(btn)		(buttons & (btn))
+#define rising_edge(btn)	(!!(rising & (btn)))
+#define falling_edge(btn)	(!!(falling & (btn)))
+#define pressed(btn)		(!!(buttons & (btn)))
 #define released(btn)		(!pressed(btn))
 
 	buttons = get_buttons(&jogwheel);
