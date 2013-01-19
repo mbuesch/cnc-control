@@ -81,17 +81,16 @@ static int debug_stream_putchar(char c, FILE *stream)
 	return 0;
 }
 
-void do_debug_printf(const char PROGPTR *_fmt, ...)
-{
-	if (debug_enabled()) {
-		char fmt[64];
-		va_list args;
+static FILE debug_fstream = FDEV_SETUP_STREAM(debug_stream_putchar, NULL,
+					      _FDEV_SETUP_WRITE);
 
-		strlcpy_P(fmt, _fmt, sizeof(fmt));
-		va_start(args, _fmt);
-		vfprintf(stdout, fmt, args);
-		va_end(args);
-	}
+void do_debug_printf(const char PROGPTR *fmt, ...)
+{
+	va_list args;
+
+	va_start(args, fmt);
+	vfprintf_P(&debug_fstream, fmt, args);
+	va_end(args);
 }
 
 void debug_dumpmem(const void *_mem, uint8_t size)
@@ -115,13 +114,10 @@ void debug_dumpmem(const void *_mem, uint8_t size)
 	debug_putchar('\n');
 }
 
-static FILE debug_stdout = FDEV_SETUP_STREAM(debug_stream_putchar, NULL,
-					     _FDEV_SETUP_WRITE);
-
 void debug_init(void)
 {
 	uart_init();
-	stdout = &debug_stdout;
-	stderr = &debug_stdout;
+	stdout = &debug_fstream;
+	stderr = &debug_fstream;
 	debug_printf("CNC control initializing\n");
 }

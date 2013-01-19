@@ -200,14 +200,12 @@ static int lcd_stream_putchar(char c, FILE *unused)
 static FILE lcd_fstream = FDEV_SETUP_STREAM(lcd_stream_putchar, NULL,
 					    _FDEV_SETUP_WRITE);
 
-void _lcd_printf(const char PROGPTR *_fmt, ...)
+void _lcd_printf(const char PROGPTR *fmt, ...)
 {
-	char fmt[64];
 	va_list args;
 
-	strlcpy_P(fmt, _fmt, sizeof(fmt));
-	va_start(args, _fmt);
-	vfprintf(&lcd_fstream, fmt, args);
+	va_start(args, fmt);
+	vfprintf_P(&lcd_fstream, fmt, args);
 	va_end(args);
 }
 
