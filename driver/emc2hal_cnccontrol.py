@@ -113,12 +113,14 @@ class CNCControlHAL(CNCControl):
 		self.spindleStop = BitPoke(self.h, self.tk, "spindle.stop")
 
 	def __checkEMC(self):
-		try:
-			os.stat("/tmp/emc.lock")
-		except (OSError), e:
-			print "CNC-Control: EMC2 doesn't seem to be running"
-			raise KeyboardInterrupt
-		return True
+		for lockname in ("/tmp/linuxcnc.lock", "/tmp/emc.lock"):
+			try:
+				os.stat(lockname)
+				return True
+			except (OSError), e:
+				pass
+		print "CNC-Control: EMC2 doesn't seem to be running"
+		raise KeyboardInterrupt
 
 	def __createHalPins(self):
 		h = self.h
