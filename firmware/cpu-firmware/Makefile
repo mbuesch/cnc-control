@@ -37,9 +37,10 @@ else
 QUIET_SPARSE	= @true
 endif
 
-CFLAGS		= -mmcu=$(ARCH) -std=gnu99 -g0 -O2 -Wall -DDEBUG=$(DEBUG) \
-		  "-Dinline=inline __attribute__((__always_inline__))" \
-		  -Wstack-usage=32 \
+CFLAGS		= -mmcu=$(ARCH) -std=gnu99 -g -Os -Wall -DDEBUG=$(DEBUG) \
+		  "-Dinline=inline __attribute__((__always_inline__)) \
+		   __attribute__((__no_instrument_function__))" \
+		  -Wstack-usage=32 -Wcast-qual \
 		  -D__EMBEDDED__ -I..
 COMBINE_CFLAGS	= -fwhole-program --combine
 SPARSEFLAGS	= $(CFLAGS) -I "/usr/lib/avr/include" -D__AVR_ARCH__=5 \
