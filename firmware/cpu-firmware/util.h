@@ -19,7 +19,7 @@
 
 #undef container_of
 #define container_of(p, type, member)	({				\
-		const typeof(((type *)0)->member) *__m = (p);		\
+		typeof(((type *)0)->member) *__m = (p);			\
 		(type *)((char *)__m - offsetof(type, member));	})
 
 #define min(a, b)		((a) < (b) ? (a) : (b))
