@@ -74,6 +74,8 @@ struct device_state {
 	bool spindle_on;		/* Spindle state. Changed in IRQ context. */
 	bool spindle_delayed_on;	/* Delayed spindle-on request */
 	jiffies_t spindle_change_time;	/* Deadline for spindle-on */
+	bool twohand_error;		/* Twohand button error */
+	jiffies_t twohand_error_delay;	/* Twohand error delay */
 
 	/* Deferred UI update requests. May be accessed in IRQ context. */
 	bool lcd_need_update;
@@ -327,23 +329,6 @@ static uint16_t get_buttons(int8_t *_jogwheel)
 
 	irq_restore(sreg);
 
-	if (buttons & BTN_TWOHAND) {
-		extports_set(EXT_LED_TWOHAND);
-	} else {
-		extports_clear(EXT_LED_TWOHAND);
-		if (devflag_is_set(DEVICE_FLG_TWOHANDEN)) {
-			/* Security switch is not pressed. Report security
-			 * related buttons as released. */
-			if (!spindle_is_on())
-				buttons &= ~BTN_SPINDLE;
-			buttons &= ~(BTN_JOG_POSITIVE |
-				     BTN_JOG_NEGATIVE |
-				     BTN_JOG_INC |
-				     BTN_ENCPUSH);
-			jogwheel = 0;
-		}
-	}
-
 	*_jogwheel = jogwheel;
 	return buttons;
 }
@@ -356,6 +341,14 @@ static void do_update_lcd(void)
 	if (ATOMIC_LOAD(state.estop)) {
 		lcd_cursor(0, 2);
 		lcd_put_str("ESTOP ACTIVE");
+		return;
+	}
+
+	if (state.twohand_error) {
+		lcd_cursor(0, 1);
+		lcd_put_str("TWOHAND BUTTON");
+		lcd_cursor(1, 4);
+		lcd_put_str("RELEASED!");
 		return;
 	}
 
@@ -726,17 +719,51 @@ static void update_button_led(bool btn_pressed, extports_t ledport)
 
 static void interpret_buttons(void)
 {
-	uint16_t buttons;
+	uint16_t buttons, old_buttons, rising, falling;
 	int8_t jogwheel;
 
 	static uint16_t prev_buttons;
 
-#define rising_edge(btn)	((buttons & (btn)) && !(prev_buttons & (btn)))
-#define falling_edge(btn)	(!(buttons & (btn)) && (prev_buttons & (btn)))
+#define rising_edge(btn)	(rising & (btn))
+#define falling_edge(btn)	(falling & (btn))
 #define pressed(btn)		(buttons & (btn))
 #define released(btn)		(!pressed(btn))
 
 	buttons = get_buttons(&jogwheel);
+
+	/* Twohand button */
+	if (pressed(BTN_TWOHAND)) {
+		extports_set(EXT_LED_TWOHAND);
+	} else {
+		extports_clear(EXT_LED_TWOHAND);
+		if (devflag_is_set(DEVICE_FLG_TWOHANDEN)) {
+			/* Security switch is not pressed. Report security
+			 * related buttons as released. */
+			old_buttons = buttons;
+			if (!spindle_is_on())
+				buttons &= ~BTN_SPINDLE;
+			buttons &= ~(BTN_JOG_POSITIVE |
+				     BTN_JOG_NEGATIVE);
+			if (old_buttons != buttons || jogwheel) {
+				state.twohand_error_delay = get_jiffies() +
+						msec2jiffies(200);
+				if (!state.twohand_error) {
+					state.twohand_error = 1;
+					update_userinterface();
+				}
+			}
+			jogwheel = 0;
+		}
+	}
+	if (state.twohand_error &&
+	    time_after(get_jiffies(), state.twohand_error_delay)) {
+		state.twohand_error = 0;
+		update_userinterface();
+	}
+
+	/* Edge detection */
+	rising = buttons & ~prev_buttons;
+	falling = ~buttons & prev_buttons;
 
 	/* on/off button */
 	if (rising_edge(BTN_ONOFF)) {
