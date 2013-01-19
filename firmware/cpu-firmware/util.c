@@ -17,6 +17,7 @@
 #include "main.h"
 #include "debug.h"
 #include "lcd.h"
+#include "uart.h"
 
 #include <avr/io.h>
 #include <avr/wdt.h>
@@ -82,21 +83,44 @@ uint8_t ffs16(uint16_t value)
 #endif /* !IN_BOOT */
 
 #ifdef STACKCHECK
-void __cyg_profile_func_enter(void *, void *)
-	noinstrument noinline;
 
-void __cyg_profile_func_exit(void *, void *)
-	noinstrument noinline;
+/* Stack usage threshold, in percent of SRAM */
+#define STACKTHRES	25
 
-void __cyg_profile_func_enter(void *this_fn,
-			      void *call_site)
+#define RAMSIZE		(RAMEND - RAMSTART)
+#define STACKLIM	(RAMEND - ((uint32_t)RAMSIZE * STACKTHRES / 100))
+
+static noinstrument void stack_check(void *this_fn,
+				     void *call_site)
 {
-	//TODO
+	static bool had_overflow = 0;
+	uint16_t sp = SP;
+
+	if (sp >= STACKLIM)
+		return;
+	if (had_overflow)
+		return;
+
+	had_overflow = 1;
+	mb();
+
+	uart_putstr("WARNING: Stack size limit reached in 0x");
+	uart_puthex((uint16_t)this_fn >> 8);
+	uart_puthex((uint16_t)this_fn);
+	uart_putstr(" (called from 0x");
+	uart_puthex((uint16_t)call_site >> 8);
+	uart_puthex((uint16_t)call_site);
+	uart_putstr(")\n");
 }
 
-void __cyg_profile_func_exit(void *this_fn,
-			     void *call_site)
+noinstrument noinline void __cyg_profile_func_enter(void *this_fn,
+						    void *call_site)
 {
-	//TODO
+	stack_check(this_fn, call_site);
 }
-#endif
+
+noinstrument noinline void __cyg_profile_func_exit(void *this_fn,
+						   void *call_site)
+{
+}
+#endif /* STACKCHECK */

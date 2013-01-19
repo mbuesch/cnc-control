@@ -156,7 +156,7 @@ static void boot_coprocessor_init(void)
 
 static noreturn noinline void exit_bootloader(void)
 {
-	uart_putstr("EXIT BOOT");
+	uart_putstr("EXIT BOOT\n");
 
 	irq_disable();
 
@@ -462,7 +462,7 @@ _mainfunc int main(void)
 	MCUCSR = 0;
 
 	uart_init();
-	uart_putstr("BOOT");
+	uart_putstr("BOOT\n");
 
 	/* Only enter bootloader on special user request
 	 * or by jump from application code. */

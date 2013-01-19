@@ -53,7 +53,6 @@ void _uart_putstr(const char PROGPTR *pstr)
 		uart_putchar(c);
 		pstr++;
 	}
-	uart_putchar('\n');
 }
 
 #if UART_USE_2X
