@@ -27,8 +27,9 @@ else
 QUIET_SPARSE	= @true
 endif
 
-CFLAGS		= -mmcu=$(ARCH) -std=c99 -g0 -Os -Wall \
-		  "-Dinline=inline __attribute__((__always_inline__))"
+CFLAGS		= -mmcu=$(ARCH) -std=c99 -g -Os -Wall \
+		  "-Dinline=inline __attribute__((__always_inline__))" \
+		  -Wstack-usage=32 -Wcast-qual
 SPARSEFLAGS	= $(CFLAGS) -I "/usr/lib/avr/include" -D__AVR_ARCH__=4 \
 		  -D__AVR_ATmega8__=1 -D__ATTR_PROGMEM__="" -Dsignal=dllexport \
 		  -Dexternally_visible=dllexport
