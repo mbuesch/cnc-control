@@ -21,6 +21,7 @@ ADMIN_TOOL	= ../../driver/admin.py
 
 DEBUG		= 0		# Debug build:  make DEBUG=1
 COMBINE		= 0		# Set to 1 to enable whole program optimization
+STACKCHECK	= 0		# Set to 1 to enable stack instrumentation
 
 V		= @		# Verbose build:  make V=1
 C		= 0		# Sparsechecker build:  make C=1
@@ -38,6 +39,7 @@ endif
 
 CFLAGS		= -mmcu=$(ARCH) -std=gnu99 -g0 -O2 -Wall -DDEBUG=$(DEBUG) \
 		  "-Dinline=inline __attribute__((__always_inline__))" \
+		  -Wstack-usage=32 \
 		  -D__EMBEDDED__ -I..
 COMBINE_CFLAGS	= -fwhole-program --combine
 SPARSEFLAGS	= $(CFLAGS) -I "/usr/lib/avr/include" -D__AVR_ARCH__=5 \
@@ -45,6 +47,11 @@ SPARSEFLAGS	= $(CFLAGS) -I "/usr/lib/avr/include" -D__AVR_ARCH__=5 \
 		  -Dexternally_visible=dllexport
 LDFLAGS		=
 
+ifeq ($(STACKCHECK),1)
+CFLAGS		+= -DSTACKCHECK=1 \
+		   -finstrument-functions \
+		   -finstrument-functions-exclude-file-list=.h
+endif
 
 # The fuse bits
 LFUSE	= 0xA0

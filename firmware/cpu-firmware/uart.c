@@ -21,8 +21,15 @@
 #include <avr/io.h>
 
 
+static bool uart_enabled;
+
+
 void uart_putchar(char c)
 {
+	if (!uart_enabled)
+		return;
+	mb();
+
 	if (c == '\n')
 		uart_putchar('\r');
 	while (!(UCSRA & (1 << UDRE)));
@@ -67,10 +74,16 @@ void uart_init(void)
 	UCSRC = (1 << UCSZ0) | (1 << UCSZ1) | (1 << URSEL);
 	/* Enable transmitter */
 	UCSRB = (0 << RXEN) | (1 << TXEN) | (0 << RXCIE);
+
+	mb();
+	uart_enabled = 1;
 }
 
 void uart_exit(void)
 {
+	uart_enabled = 0;
+	mb();
+
 	while (!(UCSRA & (1 << UDRE)));
 	_delay_ms(10);
 	UCSRB = 0;

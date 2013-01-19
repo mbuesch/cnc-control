@@ -80,3 +80,23 @@ uint8_t ffs16(uint16_t value)
 }
 
 #endif /* !IN_BOOT */
+
+#ifdef STACKCHECK
+void __cyg_profile_func_enter(void *, void *)
+	noinstrument noinline;
+
+void __cyg_profile_func_exit(void *, void *)
+	noinstrument noinline;
+
+void __cyg_profile_func_enter(void *this_fn,
+			      void *call_site)
+{
+	//TODO
+}
+
+void __cyg_profile_func_exit(void *this_fn,
+			     void *call_site)
+{
+	//TODO
+}
+#endif

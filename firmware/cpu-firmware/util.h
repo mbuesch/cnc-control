@@ -108,6 +108,9 @@ void long_delay_ms(uint16_t ms);
 /* Forced no-inline */
 #define noinline	__attribute__((__noinline__))
 
+/* Forced no-instrumentation */
+#define noinstrument	__attribute__((__no_instrument_function__))
+
 
 typedef _Bool		bool;
 
@@ -143,7 +146,7 @@ static inline void irq_restore(uint8_t sreg_flags)
 
 
 /* Convert a number (0-F) to a hexadecimal ASCII digit */
-uint8_t hexdigit_to_ascii(uint8_t digit);
+uint8_t hexdigit_to_ascii(uint8_t digit) noinstrument;
 
 
 /* Smart program memory read */
