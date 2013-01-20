@@ -90,7 +90,7 @@ ALL_EEP		= $(APP_EEP)
 
 
 .SUFFIXES:
-.PHONY: all avrdude install_flash install_boot install_eeprom install boot-app reset writefuse clean distclean
+.PHONY: all avrdude install_flash install_eeprom install boot-app reset writefuse clean distclean
 .DEFAULT_GOAL := all
 
 DEPS = $(sort $(patsubst %.c,dep-$(2)/%.d,$(1)))
@@ -170,11 +170,6 @@ install_flash: all
 	$(AVRDUDE) -B $(AVRDUDE_SPEED) -p $(AVRDUDE_ARCH) \
 	 -c $(PROGRAMMER) -P $(PROGPORT) \
 	 -U flash:w:$(BOOT_HEX) -U flash:w:$(APP_HEX)
-
-install_boot: all
-	$(AVRDUDE) -B $(AVRDUDE_SPEED) -p $(AVRDUDE_ARCH) \
-	 -c $(PROGRAMMER) -P $(PROGPORT) \
-	 -U flash:w:$(BOOT_HEX)
 
 install_eeprom: all
 	$(AVRDUDE) -B $(AVRDUDE_SPEED) -p $(AVRDUDE_ARCH) \
