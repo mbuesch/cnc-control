@@ -28,6 +28,7 @@
 #include <avr/wdt.h>
 #include <avr/pgmspace.h>
 #include <avr/eeprom.h>
+#include <avr/boot.h>
 
 #include <util/crc16.h>
 
@@ -176,32 +177,6 @@ static noreturn noinline void exit_bootloader(void)
 	unreachable();
 }
 
-static void spm_busywait(void)
-{
-	while (SPMCR & (1 << SPMEN));
-}
-
-static noinline void spm(uint8_t spmcrval, uint16_t addr, uint16_t data)
-{
-	void *z = (void *)addr;
-	register uint8_t r0 __asm__("r0") = lo8(data);
-	register uint8_t r1 __asm__("r1") = hi8(data);
-
-	spm_busywait();
-	eeprom_busy_wait();
-	__asm__ __volatile__(
-"	; SPM timed sequence		\n"
-"	out %[_SPMCR], %[_spmcrval]	\n"
-"	spm				\n"
-	: /* None */
-	: [_spmcrval]	"r" (spmcrval)
-	, [_SPMCR]	"I" (_SFR_IO_ADDR(SPMCR))
-	, [_Z]		"z" (z)
-	, [_R0]		"r" (r0)
-	, [_R1]		"r" (r1)
-	);
-}
-
 static bool verify_page(uint16_t page_address)
 {
 	uint8_t i, data0, data1;
@@ -218,25 +193,26 @@ static bool verify_page(uint16_t page_address)
 
 static void write_page(uint16_t page_address)
 {
-	uint8_t i;
+	uint8_t i, sreg;
 	uint16_t data;
 
-	/* Erase the page */
-	spm((1 << PGERS) | (1 << SPMEN), page_address, 0);
-	/* Re-enable RWW section */
-	spm((1 << RWWSRE) | (1 << SPMEN), page_address, 0);
-	/* Transfer data to hardware page buffer */
+	eeprom_busy_wait();
+	boot_spm_busy_wait();
+
+	sreg = irq_disable_save();
+
+	boot_page_erase(page_address);
+	boot_spm_busy_wait();
 	for (i = 0; i < CPU_SPM_PAGESIZE; i += 2) {
 		data = (uint16_t)(page_buffer[i]);
 		data |= ((uint16_t)(page_buffer[i + 1]) << 8);
-		spm((1 << SPMEN), page_address + i, data);
+		boot_page_fill(page_address + i, data);
 	}
-	/* Execute page write */
-	spm((1 << PGWRT) | (1 << SPMEN), page_address, 0);
-	/* Re-enable RWW section */
-	spm((1 << RWWSRE) | (1 << SPMEN), page_address, 0);
+	boot_page_write(page_address);
+	boot_spm_busy_wait();
+	boot_rww_enable();
 
-	spm_busywait();
+	irq_restore(sreg);
 }
 
 uint8_t usb_app_ep2_rx(uint8_t *data, uint8_t ctl_size,
