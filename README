@@ -3,18 +3,18 @@
 ---  Fully Open Source CNC remote control device
 ------
 
-Copyright (c) 2009-2011 Michael Buesch <m@bues.ch>
+Copyright (c) 2009-2013 Michael Buesch <m@bues.ch>
 
 
 
---- Integrating CNC-Control into EMC2 ---
+--- Integrating CNC-Control into LinuxCNC ---
 
-EMC 2.5.0(-pre) or later is required.
+LinuxCNC 2.5.x or later is required.
 
-Integration into EMC2 is easy, because the CNC-Control HAL file is pretty
-much selfcontained. Just copy the driver/cnccontrol.hal file to your EMC2
+Integration into LinuxCNC is easy, because the CNC-Control HAL file is pretty
+much selfcontained. Just copy the driver/cnccontrol.hal file to your LinuxCNC
 configuration directory. Then modify your .ini file to load the new .hal file.
-EMC2 can load multiple HAL files. So all that is needed usually is to add
+LinuxCNC can load multiple HAL files. So all that is needed usually is to add
 a line like this
 HALFILE = cnccontrol.hal
 to the end of the [HAL] section of your .ini file. Add the new HALFILE line
