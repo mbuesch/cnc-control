@@ -42,7 +42,7 @@
 /* Code flow attributes */
 #define noreturn	__attribute__((__noreturn__))
 #define _mainfunc	__attribute__((__OS_main__))
-#if __GNUC_MAJOR__ >= 4 && __GNUC_MINOR__ >= 5
+#if defined(__GNUC__) && __GNUC__ >= 4 && __GNUC_MINOR__ >= 5
 # define unreachable()	__builtin_unreachable()
 #else
 # define unreachable()	while (1)
