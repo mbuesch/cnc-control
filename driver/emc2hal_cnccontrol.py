@@ -4,12 +4,13 @@
 # CNC-control
 # EMC2 HAL module
 #
-# Copyright (C) 2011 Michael Buesch <m@bues.ch>
+# Copyright (C) 2011-2016 Michael Buesch <m@bues.ch>
 #
 """
 
 import sys
 import os
+import errno
 import time
 from datetime import datetime, timedelta
 import hal
@@ -113,12 +114,16 @@ class CNCControlHAL(CNCControl):
 		self.spindleStop = BitPoke(self.h, self.tk, "spindle.stop")
 
 	def __checkEMC(self):
-		for lockname in ("/tmp/linuxcnc.lock", "/tmp/emc.lock"):
+		for fn in ("/tmp/linuxcnc.lock",
+			   "/tmp/emc.filename",
+			   "/tmp/linuxcnc.print",
+			   "/tmp/emc.lock"):
 			try:
-				os.stat(lockname)
+				os.stat(fn)
 				return True
 			except (OSError), e:
-				pass
+				if e.errno in {errno.EPERM, errno.EACCES}:
+					return True
 		print "CNC-Control: EMC2 doesn't seem to be running"
 		raise KeyboardInterrupt
 
