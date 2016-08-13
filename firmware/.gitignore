@@ -6,8 +6,6 @@
 *.pyo
 
 dep
-dep-app
 dep-boot
 obj
-obj-app
 obj-boot
