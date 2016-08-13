@@ -2,7 +2,7 @@
  *   CNC-remote-control
  *   Button processor - Bootloader
  *
- *   Copyright (C) 2011 Michael Buesch <m@bues.ch>
+ *   Copyright (C) 2011-2016 Michael Buesch <m@bues.ch>
  *
  *   This program is free software; you can redistribute it and/or
  *   modify it under the terms of the GNU General Public License
@@ -81,22 +81,26 @@ static inline void spi_busy(bool busy)
 {
 	if (busy) {
 		/* Busy */
-		SPI_SLAVE_TRANSIRQ_PORT |= (1 << SPI_SLAVE_TRANSIRQ_BIT);
+		SPI_SLAVE_TRANSIRQ_PORT = (uint8_t)(SPI_SLAVE_TRANSIRQ_PORT |
+						    (1u << SPI_SLAVE_TRANSIRQ_BIT));
 	} else {
 		/* Ready */
-		SPI_SLAVE_TRANSIRQ_PORT &= ~(1 << SPI_SLAVE_TRANSIRQ_BIT);
+		SPI_SLAVE_TRANSIRQ_PORT = (uint8_t)(SPI_SLAVE_TRANSIRQ_PORT &
+						    ~(1u << SPI_SLAVE_TRANSIRQ_BIT));
 	}
 }
 
 static void spi_init(void)
 {
-	DDRB |= (1 << 4/*MISO*/);
-	DDRB &= ~((1 << 5/*SCK*/) | (1 << 3/*MOSI*/) | (1 << 2/*SS*/));
+	DDRB = (uint8_t)(DDRB | (1u << 4/*MISO*/));
+	DDRB = (uint8_t)(DDRB & ~((1u << 5/*SCK*/) | (1u << 3/*MOSI*/) |
+				  (1u << 2/*SS*/)));
 	spi_busy(1);
-	SPI_SLAVE_TRANSIRQ_DDR |= (1 << SPI_SLAVE_TRANSIRQ_BIT);
+	SPI_SLAVE_TRANSIRQ_DDR = (uint8_t)(SPI_SLAVE_TRANSIRQ_DDR |
+					   (1u << SPI_SLAVE_TRANSIRQ_BIT));
 
-	SPCR = (1 << SPE) | (0 << SPIE) | (0 << CPOL) | (0 << CPHA);
-	SPSR = 0;
+	SPCR = (1u << SPE) | (0u << SPIE) | (0u << CPOL) | (0u << CPHA);
+	SPSR = 0u;
 	(void)SPSR; /* clear state */
 	(void)SPDR; /* clear state */
 }
@@ -171,7 +175,7 @@ static void write_page(uint16_t page_address)
 
 	boot_page_erase(page_address);
 	boot_spm_busy_wait();
-	for (i = 0; i < SPM_PAGESIZE; i += 2) {
+	for (i = 0; i < SPM_PAGESIZE; i = (uint8_t)(i + 2u)) {
 		data = (uint16_t)(page_buffer[i]);
 		data |= ((uint16_t)(page_buffer[i + 1]) << 8);
 		boot_page_fill(page_address + i, data);
@@ -183,6 +187,11 @@ static void write_page(uint16_t page_address)
 	irq_restore(sreg);
 }
 
+static noinline uint8_t calc_crc8(uint8_t crc, uint8_t data)
+{
+	return spi_crc8(crc, data);
+}
+
 static void do_flash(void)
 {
 	uint8_t data, addr_lo, addr_hi;
@@ -191,15 +200,15 @@ static void do_flash(void)
 	bool ok;
 
 	addr_lo = spi_xfer_sync(0);
-	crc = spi_crc8(crc, addr_lo);
+	crc = calc_crc8(crc, addr_lo);
 	addr_hi = spi_xfer_sync(0);
-	crc = spi_crc8(crc, addr_hi);
-	page_address = addr_lo | (addr_hi << 8);
+	crc = calc_crc8(crc, addr_hi);
+	page_address = (uint16_t)addr_lo | ((uint16_t)addr_hi << 8);
 
 	for (i = 0; i < ARRAY_SIZE(page_buffer); i++) {
 		data = spi_xfer_sync(0);
 		page_buffer[i] = data;
-		crc = spi_crc8(crc, data);
+		crc = calc_crc8(crc, data);
 	}
 
 	crc ^= 0xFF;

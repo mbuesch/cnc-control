@@ -2,7 +2,7 @@
  *   CNC-remote-control
  *   Button processor
  *
- *   Copyright (C) 2009-2011 Michael Buesch <m@bues.ch>
+ *   Copyright (C) 2009-2016 Michael Buesch <m@bues.ch>
  *
  *   This program is free software; you can redistribute it and/or
  *   modify it under the terms of the GNU General Public License
@@ -103,7 +103,9 @@ static inline void do_encoder_read(struct encoder_hwstate *hw,
 				   bool a, bool b,
 				   jiffies_t timestamp)
 {
-	uint8_t gray = (uint8_t)a | ((uint8_t)b << 1);
+	uint8_t gray;
+
+	gray = (uint8_t)((uint8_t)a | ((uint8_t)b << 1u));
 
 	if (gray != hw->gray) {
 		hw->gray = gray;
@@ -152,14 +154,14 @@ static void buttons_init(void)
 	uint8_t i;
 
 	/* Configure inputs and pullups */
-	DDRB &= ~0x03;
-	PORTB |= 0x03;
+	DDRB = (uint8_t)(DDRB & ~0x03u);
+	PORTB = (uint8_t)(PORTB | 0x03u);
 
-	DDRC &= ~0x3F;
-	PORTC |= 0x3F;
+	DDRC = (uint8_t)(DDRC & ~0x3Fu);
+	PORTC = (uint8_t)(PORTC | 0x3Fu);
 
-	DDRD &= ~0xFF;
-	PORTD |= 0xFF;
+	DDRD = (uint8_t)(DDRD & ~0xFFu);
+	PORTD = (uint8_t)(PORTD | 0xFFu);
 
 	buttons_read();
 	for (i = 0; i < ARRAY_SIZE(enc_hwstates); i++)
@@ -168,10 +170,12 @@ static void buttons_init(void)
 
 static void trigger_trans_interrupt(void)
 {
-	SPI_SLAVE_TRANSIRQ_PORT &= ~(1 << SPI_SLAVE_TRANSIRQ_BIT);
+	SPI_SLAVE_TRANSIRQ_PORT = (uint8_t)(SPI_SLAVE_TRANSIRQ_PORT &
+					    ~(1u << SPI_SLAVE_TRANSIRQ_BIT));
 	nop();
 	nop();
-	SPI_SLAVE_TRANSIRQ_PORT |= (1 << SPI_SLAVE_TRANSIRQ_BIT);
+	SPI_SLAVE_TRANSIRQ_PORT = (uint8_t)(SPI_SLAVE_TRANSIRQ_PORT |
+					    (1u << SPI_SLAVE_TRANSIRQ_BIT));
 }
 
 static inline uint8_t do_sync_button(struct button_hwstate *hw,
@@ -185,9 +189,9 @@ static inline uint8_t do_sync_button(struct button_hwstate *hw,
 			state = hw->state;
 			irq_disable();
 			if (state)
-				swstates |= (1 << swstate_bit);
+				swstates |= (1u << swstate_bit);
 			else
-				swstates &= ~(1 << swstate_bit);
+				swstates &= ~(1u << swstate_bit);
 			irq_enable();
 			hw->synchronized = 1;
 
@@ -299,7 +303,7 @@ ISR(SPI_STC_vect)
 		checksum ^= data;
 		break;
 	case SPI_CONTROL_GETHIGH:
-		data = (swstates >> 8) & 0xFF;
+		data = (uint8_t)((swstates >> 8) & 0xFFu);
 		checksum ^= data;
 		break;
 	case SPI_CONTROL_GETENC:
@@ -329,12 +333,15 @@ out:
 static void spi_init(void)
 {
 	/* SPI slave mode 0 with IRQ enabled. */
-	DDRB |= (1 << 4/*MISO*/);
-	DDRB &= ~((1 << 5/*SCK*/) | (1 << 3/*MOSI*/) | (1 << 2/*SS*/));
-	SPI_SLAVE_TRANSIRQ_PORT |= (1 << SPI_SLAVE_TRANSIRQ_BIT);
-	SPI_SLAVE_TRANSIRQ_DDR |= (1 << SPI_SLAVE_TRANSIRQ_BIT);
+	DDRB = (uint8_t)(DDRB | (1u << 4/*MISO*/));
+	DDRB = (uint8_t)(DDRB & ~((1u << 5/*SCK*/) | (1u << 3/*MOSI*/) |
+				  (1u << 2/*SS*/)));
+	SPI_SLAVE_TRANSIRQ_PORT = (uint8_t)(SPI_SLAVE_TRANSIRQ_PORT |
+					    (1u << SPI_SLAVE_TRANSIRQ_BIT));
+	SPI_SLAVE_TRANSIRQ_DDR = (uint8_t)(SPI_SLAVE_TRANSIRQ_DDR | 
+					   (1u << SPI_SLAVE_TRANSIRQ_BIT));
 
-	SPCR = (1 << SPE) | (1 << SPIE) | (0 << CPOL) | (0 << CPHA);
+	SPCR = (1u << SPE) | (1u << SPIE) | (0u << CPOL) | (0u << CPHA);
 	(void)SPSR; /* clear state */
 	(void)SPDR; /* clear state */
 }
