@@ -33,7 +33,7 @@ void uart_putchar(char c)
 	if (c == '\n')
 		uart_putchar('\r');
 	while (!(UCSRA & (1 << UDRE)));
-	UDR = c;
+	UDR = (uint8_t)c;
 }
 
 void uart_puthex(uint8_t val)
@@ -47,7 +47,7 @@ void _uart_putstr(const char PROGPTR *pstr)
 	char c;
 
 	while (1) {
-		c = pgm_read_byte(pstr);
+		c = (char)pgm_read_byte(pstr);
 		if (c == '\0')
 			break;
 		uart_putchar(c);

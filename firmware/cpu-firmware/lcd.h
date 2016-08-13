@@ -9,14 +9,14 @@
 /*** Hardware pin assignments ***/
 #define LCD_PORT	PORTA		/* LCD PORT register */
 #define LCD_DDR		DDRA		/* LCD DDR register */
-#define LCD_PIN_E	(1 << 3)	/* E pin */
-#define LCD_PIN_RS	(1 << 2)	/* RS pin */
-#define LCD_DATA_SHIFT	4		/* Data pins at D4-D7 */
+#define LCD_PIN_E	(1u << 3u)	/* E pin */
+#define LCD_PIN_RS	(1u << 2u)	/* RS pin */
+#define LCD_DATA_SHIFT	4u		/* Data pins at D4-D7 */
 
 /*** Hardware parameters ***/
-#define LCD_NR_LINES		2   /* Linecount. Must be power of two. */
-#define LCD_NR_COLUMNS		16  /* Columncount. Must be power of two. */
-#define LCD_FONT_5x10		0   /* 5x10 or 5x8 font? */
+#define LCD_NR_LINES		2u	/* Linecount. Must be power of two. */
+#define LCD_NR_COLUMNS		16u	/* Columncount. Must be power of two. */
+#define LCD_FONT_5x10		0u	/* 5x10 or 5x8 font? */
 
 
 /*** Hardware access ***/
@@ -49,7 +49,7 @@ void lcd_clear_buffer(void);
 static inline void lcd_cursor(uint8_t line, uint8_t column)
 {
 	extern uint8_t lcd_cursor_pos;
-	lcd_cursor_pos = (line * LCD_NR_COLUMNS) + column;
+	lcd_cursor_pos = (uint8_t)((line * LCD_NR_COLUMNS) + column);
 }
 
 /** lcd_getline - Returns the current LCD software cursor line. */

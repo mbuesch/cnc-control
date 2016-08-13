@@ -58,14 +58,15 @@ ISR(SPI_STC_vect)
 	async_state.rxbuf++;
 	if (async_state.bytes_left) {
 		if (async_state.wait_ms)
-			async_state.wait_ms_left = async_state.wait_ms + 1;
+			async_state.wait_ms_left =
+				(uint8_t)(async_state.wait_ms + 1u);
 		else
 			spi_transfer_async();
 	} else {
-		SPCR &= ~(1 << SPIE);
+		SPCR = (uint8_t)(SPCR & ~(1u << SPIE));
 		spi_slave_select(0);
 		mb();
-		async_state.flags &= ~SPI_ASYNC_RUNNING;
+		async_state.flags = (uint8_t)(async_state.flags & ~SPI_ASYNC_RUNNING);
 		spi_async_done();
 	}
 }
@@ -147,15 +148,19 @@ void spi_lowlevel_exit(void)
 void spi_lowlevel_init(void)
 {
 	spi_slave_select(0);
-	DDRB |= (1 << 5/*MOSI*/) | (1 << 7/*SCK*/) | (1 << 4/*SS*/);
-	DDRB &= ~(1 << 6/*MISO*/);
-	SPI_MASTER_TRANSIRQ_DDR &= ~(1 << SPI_MASTER_TRANSIRQ_BIT);
-	SPI_MASTER_TRANSIRQ_PORT &= ~(1 << SPI_MASTER_TRANSIRQ_BIT);
-	GICR &= ~(1 << SPI_MASTER_TRANSIRQ_INT);
-	SPCR = (1 << SPE) | (1 << MSTR) |
-	       (0 << CPOL) | (0 << CPHA) |
-	       (0 << SPR0) | (1 << SPR1);
-	SPSR = 0;
+	DDRB = (uint8_t)(DDRB | (1u << 5/*MOSI*/) |
+				(1u << 7/*SCK*/) |
+				(1u << 4/*SS*/));
+	DDRB = (uint8_t)(DDRB & ~(1u << 6/*MISO*/));
+	SPI_MASTER_TRANSIRQ_DDR = (uint8_t)(SPI_MASTER_TRANSIRQ_DDR &
+					    ~(1u << SPI_MASTER_TRANSIRQ_BIT));
+	SPI_MASTER_TRANSIRQ_PORT = (uint8_t)(SPI_MASTER_TRANSIRQ_PORT &
+					     ~(1u << SPI_MASTER_TRANSIRQ_BIT));
+	GICR = (uint8_t)(GICR & ~(1u << SPI_MASTER_TRANSIRQ_INT));
+	SPCR = (1u << SPE) | (1u << MSTR) |
+	       (0u << CPOL) | (0u << CPHA) |
+	       (0u << SPR0) | (1u << SPR1);
+	SPSR = 0u;
 	long_delay_ms(150);
 	(void)SPSR; /* clear state */
 	(void)SPDR; /* clear state */

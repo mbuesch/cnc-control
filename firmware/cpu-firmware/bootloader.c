@@ -2,7 +2,7 @@
  *   CNC-remote-control
  *   CPU - Bootloader
  *
- *   Copyright (C) 2011 Michael Buesch <m@bues.ch>
+ *   Copyright (C) 2011-2016 Michael Buesch <m@bues.ch>
  *
  *   This program is free software; you can redistribute it and/or
  *   modify it under the terms of the GNU General Public License
@@ -56,9 +56,9 @@ static void disable_all_irq_sources(void)
 	GICR = 0;
 	TIMSK = 0;
 	SPCR = 0;
-	UCSRB &= ~(1 << RXCIE);
-	UCSRB &= ~(1 << TXCIE);
-	UCSRB &= ~(1 << UDRIE);
+	UCSRB = (uint8_t)(UCSRB & ~(1u << RXCIE));
+	UCSRB = (uint8_t)(UCSRB & ~(1u << TXCIE));
+	UCSRB = (uint8_t)(UCSRB & ~(1u << UDRIE));
 	ADCSRA = 0;
 	EECR = 0;
 	ACSR = 0;
@@ -203,7 +203,7 @@ static void write_page(uint16_t page_address)
 
 	boot_page_erase(page_address);
 	boot_spm_busy_wait();
-	for (i = 0; i < CPU_SPM_PAGESIZE; i += 2) {
+	for (i = 0; i < CPU_SPM_PAGESIZE; i = (uint8_t)(i + 2u)) {
 		data = (uint16_t)(page_buffer[i]);
 		data |= ((uint16_t)(page_buffer[i + 1]) << 8);
 		boot_page_fill(page_address + i, data);
@@ -213,6 +213,11 @@ static void write_page(uint16_t page_address)
 	boot_rww_enable();
 
 	irq_restore(sreg);
+}
+
+static noinline uint8_t calc_crc8(uint8_t crc, uint8_t data)
+{
+	return spi_crc8(crc, data);
 }
 
 uint8_t usb_app_ep2_rx(uint8_t *data, uint8_t ctl_size,
@@ -270,7 +275,7 @@ uint8_t usb_app_ep2_rx(uint8_t *data, uint8_t ctl_size,
 		break;
 	}
 	case CONTROL_BOOT_WRITEBUF: {
-		uint8_t i, size, crc = 0, data;
+		uint8_t i, size, crc = 0, d;
 		uint16_t offset;
 
 		if (ctl_size < CONTROL_MSG_SIZE(boot_writebuf))
@@ -284,9 +289,9 @@ uint8_t usb_app_ep2_rx(uint8_t *data, uint8_t ctl_size,
 			goto err_inval;
 
 		for (i = 0; i < size; i++) {
-			data = ctl->boot_writebuf.data[i];
-			crc = control_crc8(crc, data);
-			page_buffer[offset + i] = data;
+			d = ctl->boot_writebuf.data[i];
+			crc = calc_crc8(crc, d);
+			page_buffer[offset + i] = d;
 		}
 		crc ^= 0xFF;
 		if (crc != ctl->boot_writebuf.crc)
@@ -295,7 +300,7 @@ uint8_t usb_app_ep2_rx(uint8_t *data, uint8_t ctl_size,
 	}
 	case CONTROL_BOOT_FLASHPG: {
 		uint16_t i, address;
-		uint8_t data, retval, crc = 0;
+		uint8_t d, retval, crc = 0;
 
 		if (ctl_size < CONTROL_MSG_SIZE(boot_flashpg))
 			goto err_size;
@@ -310,14 +315,14 @@ uint8_t usb_app_ep2_rx(uint8_t *data, uint8_t ctl_size,
 		case TARGET_COPROC:
 			spi_slave_select(1);
 			coprocessor_spi_transfer(SPI_CONTROL_STARTFLASH);
-			crc = spi_crc8(crc, lo8(address));
+			crc = calc_crc8(crc, lo8(address));
 			coprocessor_spi_transfer(lo8(address));
-			crc = spi_crc8(crc, hi8(address));
+			crc = calc_crc8(crc, hi8(address));
 			coprocessor_spi_transfer(hi8(address));
 			for (i = 0; i < COPROC_SPM_PAGESIZE; i++) {
-				data = page_buffer[i];
-				crc = spi_crc8(crc, data);
-				coprocessor_spi_transfer(data);
+				d = page_buffer[i];
+				crc = calc_crc8(crc, d);
+				coprocessor_spi_transfer(d);
 			}
 			crc ^= 0xFF;
 			coprocessor_spi_transfer(crc);
@@ -341,7 +346,7 @@ uint8_t usb_app_ep2_rx(uint8_t *data, uint8_t ctl_size,
 	}
 	case CONTROL_BOOT_EEPWRITE: {
 		uint16_t i, size, address;
-		uint8_t data;
+		uint8_t d;
 
 		if (ctl_size < CONTROL_MSG_SIZE(boot_eepwrite))
 			goto err_size;
@@ -360,8 +365,8 @@ uint8_t usb_app_ep2_rx(uint8_t *data, uint8_t ctl_size,
 			eeprom_busy_wait();
 
 			for (i = 0; i < size; i++) {
-				data = eeprom_read_byte((void *)(address + i));
-				if (data != page_buffer[i])
+				d = eeprom_read_byte((void *)(address + i));
+				if (d != page_buffer[i])
 					goto err_cmdfail;
 			}
 			break;
@@ -452,8 +457,8 @@ _mainfunc int main(void)
 	}
 
 	/* Disable shift registers OE */
-	SR4094_OUTEN_PORT &= ~(1 << SR4094_OUTEN_BIT);
-	SR4094_OUTEN_DDR |= (1 << SR4094_OUTEN_BIT);
+	SR4094_OUTEN_PORT = (uint8_t)(SR4094_OUTEN_PORT & ~(1u << SR4094_OUTEN_BIT));
+	SR4094_OUTEN_DDR = (uint8_t)(SR4094_OUTEN_DDR | (1u << SR4094_OUTEN_BIT));
 
 	disable_all_irq_sources();
 	route_irqs_to_bootloader();

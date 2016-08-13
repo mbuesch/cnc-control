@@ -1,7 +1,7 @@
 /*
  *   74HCT4094 shift register driver
  *
- *   Copyright (C) 2009-2011 Michael Buesch <m@bues.ch>
+ *   Copyright (C) 2009-2016 Michael Buesch <m@bues.ch>
  *
  *   This program is free software; you can redistribute it and/or
  *   modify it under the terms of the GNU General Public License
@@ -19,8 +19,11 @@
 #include <avr/io.h>
 
 
-#define _sr4094_clear(pin)	SR4094_##pin##_PORT &= ~(1 << SR4094_##pin##_BIT)
-#define _sr4094_set(pin)	SR4094_##pin##_PORT |= (1 << SR4094_##pin##_BIT)
+#define _sr4094_clear(pin) \
+	SR4094_##pin##_PORT = (uint8_t)(SR4094_##pin##_PORT & ~(1 << SR4094_##pin##_BIT))
+
+#define _sr4094_set(pin) \
+	SR4094_##pin##_PORT = (uint8_t)(SR4094_##pin##_PORT | (1u << SR4094_##pin##_BIT))
 
 
 static inline void sr4094_transfer_start(void)

@@ -2,7 +2,7 @@
  *   CNC-remote-control
  *   Debug interface
  *
- *   Copyright (C) 2009-2011 Michael Buesch <m@bues.ch>
+ *   Copyright (C) 2009-2016 Michael Buesch <m@bues.ch>
  *
  *   This program is free software; you can redistribute it and/or
  *   modify it under the terms of the GNU General Public License
@@ -43,8 +43,9 @@ uint8_t debug_ringbuf_get(void *buf, uint8_t size)
 	for ( ; dbg_ringbuf_used && size; dbg_ringbuf_used--, size--, count++) {
 		*outbuf++ = dbg_ringbuf[dbg_ringbuf_out];
 		if (dbg_ringbuf_out >= ARRAY_SIZE(dbg_ringbuf) - 1)
-			dbg_ringbuf_out = -1;
-		dbg_ringbuf_out++;
+			dbg_ringbuf_out = 0u;
+		else
+			dbg_ringbuf_out++;
 	}
 	irq_restore(sreg);
 
@@ -54,16 +55,19 @@ uint8_t debug_ringbuf_get(void *buf, uint8_t size)
 static void debug_ringbuf_putchar(char c)
 {
 	uint8_t sreg;
+	uint16_t used;
 
 	if (!devflag_is_set(DEVICE_FLG_USBLOGMSG))
 		return;
 
 	sreg = irq_disable_save();
-	if (dbg_ringbuf_used < ARRAY_SIZE(dbg_ringbuf)) {
-		dbg_ringbuf[dbg_ringbuf_in] = c;
+	used = dbg_ringbuf_used;
+	if (used < ARRAY_SIZE(dbg_ringbuf)) {
+		dbg_ringbuf[dbg_ringbuf_in] = (uint8_t)c;
 		if (dbg_ringbuf_in >= ARRAY_SIZE(dbg_ringbuf) - 1)
-			dbg_ringbuf_in = -1;
-		dbg_ringbuf_in++;
+			dbg_ringbuf_in = 0u;
+		else
+			dbg_ringbuf_in++;
 		dbg_ringbuf_used++;
 	}
 	irq_restore(sreg);

@@ -1,7 +1,7 @@
 /*
  *   Philips PDIUSBD12 USB 2.0 device driver
  *
- *   Copyright (C) 2007-2011 Michael Buesch <m@bues.ch>
+ *   Copyright (C) 2007-2016 Michael Buesch <m@bues.ch>
  *
  *   This program is free software; you can redistribute it and/or
  *   modify it under the terms of the GNU General Public License
@@ -32,13 +32,13 @@
 #define PDIUSB_CTL_PIN		PIND
 #define PDIUSB_CTL_PORT		PORTD
 #define PDIUSB_CTL_DDR		DDRD
-#define  PDIUSB_CTL_IRQ		(1 << 3) /* INT_N pin. Mandatory */
-#define  PDIUSB_CTL_A0		(1 << 6) /* A0 pin. Mandatory */
-#define  PDIUSB_CTL_WR		(1 << 4) /* WD_N pin. Mandatory */
-#define  PDIUSB_CTL_RD		(1 << 5) /* RD_N pin. Mandatory */
+#define  PDIUSB_CTL_IRQ		(1u << 3) /* INT_N pin. Mandatory */
+#define  PDIUSB_CTL_A0		(1u << 6) /* A0 pin. Mandatory */
+#define  PDIUSB_CTL_WR		(1u << 4) /* WD_N pin. Mandatory */
+#define  PDIUSB_CTL_RD		(1u << 5) /* RD_N pin. Mandatory */
 /* Optional pins. Don't define these, if the pin is not connected. */
-//#define  PDIUSB_CTL_RST		(1 << 4) /* RESET_N pin. Optional */
-//#define  PDIUSB_CTL_SUSP	(1 << 3) /* SUSPEND pin. Optional */
+//#define  PDIUSB_CTL_RST		(1u << 4) /* RESET_N pin. Optional */
+//#define  PDIUSB_CTL_SUSP	(1u << 3) /* SUSPEND pin. Optional */
 
 /* The interrupt vector */
 #define PDIUSB_IRQ_VECTOR	INT1_vect
@@ -94,19 +94,19 @@ static inline void raw_data_delay(void)
 /* Enable the PDIUSB interrupt line */
 static inline void pdiusb_interrupt_enable(void)
 {
-	GICR |= (1 << INT1);
+	GICR = (uint8_t)(GICR | (1u << INT1));
 }
 
 /* Disable the PDIUSB interrupt line */
 static inline void pdiusb_interrupt_disable(void)
 {
-	GICR &= ~(1 << INT1);
+	GICR = (uint8_t)(GICR & ~(1u << INT1));
 }
 
 /* Clear the PDIUSB interrupt line flag */
 static inline void pdiusb_interrupt_flag_clear(void)
 {
-	GIFR |= (1 << INTF1);
+	GIFR = (1u << INTF1);
 }
 
 /*************************************************************************
@@ -115,9 +115,10 @@ static inline void pdiusb_interrupt_flag_clear(void)
 
 
 typedef uint16_t trans_stat_t;
-#define TRANS_STAT(status, size)	((uint16_t)(status) | ((uint16_t)(size) << 8))
-#define GET_TRANS_STAT(trans)		((uint16_t)(trans) & 0xFF)
-#define GET_TRANS_SIZE(trans)		(((uint16_t)(trans) >> 8) & 0xFF)
+#define TRANS_STAT(status, size)	((trans_stat_t)((uint16_t)(status) |\
+						        ((uint16_t)(size) << 8)))
+#define GET_TRANS_STAT(trans)		((uint8_t)((uint16_t)(trans) & 0xFF))
+#define GET_TRANS_SIZE(trans)		((uint8_t)(((uint16_t)(trans) >> 8) & 0xFF))
 
 /* Define the optional pins to zero, if they are undefined. */
 #ifndef PDIUSB_CTL_RST
@@ -157,21 +158,21 @@ static uint16_t pdiusb_irq_status;
 
 static inline void pdiusb_command_mode(void)
 {
-	PDIUSB_CTL_PORT |= PDIUSB_CTL_A0;
+	PDIUSB_CTL_PORT = (uint8_t)(PDIUSB_CTL_PORT | PDIUSB_CTL_A0);
 }
 
 static inline void pdiusb_data_mode(void)
 {
-	PDIUSB_CTL_PORT &= ~PDIUSB_CTL_A0;
+	PDIUSB_CTL_PORT = (uint8_t)(PDIUSB_CTL_PORT & ~PDIUSB_CTL_A0);
 }
 
 /* Write data to the controller. */
 static void pdiusb_write(uint8_t data)
 {
 	raw_data_out_prepare();
-	PDIUSB_CTL_PORT &= ~PDIUSB_CTL_WR;
+	PDIUSB_CTL_PORT = (uint8_t)(PDIUSB_CTL_PORT & ~PDIUSB_CTL_WR);
 	raw_data_out(data);
-	PDIUSB_CTL_PORT |= PDIUSB_CTL_WR;
+	PDIUSB_CTL_PORT = (uint8_t)(PDIUSB_CTL_PORT | PDIUSB_CTL_WR);
 	raw_data_delay();
 }
 
@@ -181,10 +182,10 @@ static uint8_t pdiusb_read(void)
 	uint8_t data;
 
 	raw_data_in_prepare();
-	PDIUSB_CTL_PORT &= ~PDIUSB_CTL_RD;
+	PDIUSB_CTL_PORT = (uint8_t)(PDIUSB_CTL_PORT & ~PDIUSB_CTL_RD);
 	raw_data_delay();
 	data = raw_data_in();
-	PDIUSB_CTL_PORT |= PDIUSB_CTL_RD;
+	PDIUSB_CTL_PORT = (uint8_t)(PDIUSB_CTL_PORT | PDIUSB_CTL_RD);
 
 	return data;
 }
@@ -208,8 +209,8 @@ static void pdiusb_command_w8(uint8_t command, uint8_t data)
 static void pdiusb_command_w16(uint8_t command, uint16_t data)
 {
 	pdiusb_command(command);
-	pdiusb_write(data);
-	pdiusb_write(data >> 8);
+	pdiusb_write((uint8_t)data);
+	pdiusb_write((uint8_t)(data >> 8));
 }
 
 /* Send a command and read 8-bit of command data. */
@@ -575,11 +576,17 @@ static void pdiusb_set_mode(uint16_t mode)
 /* Basic port setup */
 static uint16_t pdiusb_configure_ports(void)
 {
-	PDIUSB_CTL_PORT |= (PDIUSB_CTL_WR | PDIUSB_CTL_RD | PDIUSB_CTL_RST);
-	PDIUSB_CTL_PORT &= ~(PDIUSB_CTL_IRQ | PDIUSB_CTL_SUSP);
-	PDIUSB_CTL_DDR |= (PDIUSB_CTL_A0 | PDIUSB_CTL_WR |
-			   PDIUSB_CTL_RD | PDIUSB_CTL_RST);
-	PDIUSB_CTL_DDR &= ~(PDIUSB_CTL_IRQ | PDIUSB_CTL_SUSP);
+	PDIUSB_CTL_PORT = (uint8_t)(PDIUSB_CTL_PORT | (PDIUSB_CTL_WR |
+						       PDIUSB_CTL_RD |
+						       PDIUSB_CTL_RST));
+	PDIUSB_CTL_PORT = (uint8_t)(PDIUSB_CTL_PORT & ~(PDIUSB_CTL_IRQ |
+							PDIUSB_CTL_SUSP));
+	PDIUSB_CTL_DDR = (uint8_t)(PDIUSB_CTL_DDR | (PDIUSB_CTL_A0 |
+						     PDIUSB_CTL_WR |
+						     PDIUSB_CTL_RD |
+						     PDIUSB_CTL_RST));
+	PDIUSB_CTL_DDR = (uint8_t)(PDIUSB_CTL_DDR & ~(PDIUSB_CTL_IRQ |
+						      PDIUSB_CTL_SUSP));
 	pdiusb_data_mode();
 
 	/* Return the chipID to verify the device is working. */

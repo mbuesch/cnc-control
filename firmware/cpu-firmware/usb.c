@@ -94,7 +94,7 @@ static uint8_t create_config_descriptor(void *buf, uint8_t index)
 	}
 
 	ptr = (void *)(uintptr_t)usb_pgm_read(&config_descriptor_ptrs[index].ptr);
-	size = usb_pgm_read(&config_descriptor_ptrs[index].size);
+	size = (uint8_t)usb_pgm_read(&config_descriptor_ptrs[index].size);
 
 	usb_copy_from_pgm(buf, ptr, size);
 
@@ -115,9 +115,9 @@ static uint8_t create_string_descriptor(void *buf, uint8_t index)
 	}
 
 	string = (void *)(uintptr_t)usb_pgm_read(&string_descriptor_ptrs[index].ptr);
-	size = usb_pgm_read(&string_descriptor_ptrs[index].size);
+	size = (uint8_t)usb_pgm_read(&string_descriptor_ptrs[index].size);
 
-	s->bLength = 2 + size;
+	s->bLength = (uint8_t)(2u + size);
 	s->bDescriptorType = USB_DT_STRING;
 	usb_copy_from_pgm(s->string, string, size);
 
@@ -130,7 +130,7 @@ static uint8_t usb_set_configuration(uint8_t bConfigurationValue)
 
 	if (bConfigurationValue) {
 		/* Select a configuration */
-		if (bConfigurationValue - 1 >= ARRAY_SIZE(config_descriptor_ptrs)) {
+		if (bConfigurationValue - 1u >= ARRAY_SIZE(config_descriptor_ptrs)) {
 			usb_printstr("USB: Invalid bConfigurationValue");
 			return 1;
 		}
@@ -157,7 +157,8 @@ static uint8_t usb_control_endpoint_rx(struct usb_ctrl *ctl)
 		usb_control_buf[0] = 0;
 		usb_control_buf[1] = 0;
 		usb_control_len = 2;
-		if (usb_endpoint_is_stalled(index))
+		if (index <= 0xFFu &&
+		    usb_endpoint_is_stalled((uint8_t)index))
 			usb_control_buf[0] |= (1 << USB_ENDPOINT_HALT);
 		break;
 	}
@@ -168,8 +169,9 @@ static uint8_t usb_control_endpoint_rx(struct usb_ctrl *ctl)
 		DBG(usb_print2num("USB: EP clear feature", feature,
 				  "on", index));
 
-		if (feature & (1 << USB_ENDPOINT_HALT))
-			usb_unstall_endpoint(index);
+		if (index <= 0xFFu &&
+		    (feature & (1 << USB_ENDPOINT_HALT)))
+			usb_unstall_endpoint((uint8_t)index);
 		break;
 	}
 	case USB_REQ_SET_FEATURE: {
@@ -179,8 +181,9 @@ static uint8_t usb_control_endpoint_rx(struct usb_ctrl *ctl)
 		DBG(usb_print2num("USB: EP set feature", feature,
 				  "on", index));
 
-		if (feature & (1 << USB_ENDPOINT_HALT))
-			usb_stall_endpoint(index);
+		if (index <= 0xFFu &&
+		    (feature & (1 << USB_ENDPOINT_HALT)))
+			usb_stall_endpoint((uint8_t)index);
 		break;
 	}
 	default:
@@ -270,9 +273,11 @@ static uint8_t usb_control_device_rx(struct usb_ctrl *ctl)
 	case USB_REQ_SET_ADDRESS: {
 		uint16_t address = le16_to_cpu(ctl->wValue);
 
-		DBG(usb_print1num("USB: DEV set address to", address));
+		if (address <= 0x7Fu) {
+			DBG(usb_print1num("USB: DEV set address to", address));
 
-		usb_set_address(address);
+			usb_set_address((uint8_t)address);
+		}
 		break;
 	}
 	case USB_REQ_GET_CONFIGURATION: {
@@ -284,15 +289,18 @@ static uint8_t usb_control_device_rx(struct usb_ctrl *ctl)
 		break;
 	}
 	case USB_REQ_SET_CONFIGURATION: {
-		if (usb_set_configuration(le16_to_cpu(ctl->wValue)))
+		uint16_t cfg = le16_to_cpu(ctl->wValue);
+
+		if (cfg > 0xFFu ||
+		    usb_set_configuration((uint8_t)cfg))
 			return USB_FRAME_ERROR;
 		break;
 	}
 	case USB_REQ_GET_STATUS: {
 		DBG(usb_printstr("USB: DEV get status"));
 
-		usb_control_buf[0] = usb_device_status;
-		usb_control_buf[1] = usb_device_status >> 8;
+		usb_control_buf[0] = (uint8_t)usb_device_status;
+		usb_control_buf[1] = (uint8_t)(usb_device_status >> 8);
 		usb_control_len = 2;
 		break;
 	}
@@ -366,8 +374,10 @@ uint8_t usb_control_setup_rx(struct usb_ctrl *ctl)
 			return USB_RX_ERROR;
 		}
 	} else { /* IN transfer */
-		if (usb_control_len > le16_to_cpu(ctl->wLength))
-			usb_control_len = le16_to_cpu(ctl->wLength);
+		uint16_t len = le16_to_cpu(ctl->wLength);
+
+		if ((uint16_t)usb_control_len > len)
+			usb_control_len = (uint8_t)len;
 	}
 
 	return USB_RX_DONE;
@@ -390,12 +400,12 @@ static noinline uint8_t usb_generic_tx_poll(void **data, uint8_t chunksize,
 {
 	if (chunksize > *buffer_size)
 		chunksize = *buffer_size;
-	*buffer_size -= chunksize;
+	*buffer_size = (uint8_t)(*buffer_size - chunksize);
 	*data = buffer + *buffer_ptr;
 	if (*buffer_size)
-		*buffer_ptr += chunksize;
+		*buffer_ptr = (uint8_t)(*buffer_ptr + chunksize);
 	else
-		*buffer_ptr = 0;
+		*buffer_ptr = 0u;
 	if (!chunksize)
 		return USB_TX_POLL_NONE;
 
@@ -446,7 +456,7 @@ uint8_t usb_ep1_tx_poll(void **data, uint8_t chunksize)
 	if (usb_ep1_len == 0) {
 		usb_ep1_len = usb_app_ep1_tx_poll(usb_ep1_buf);
 		if (!usb_ep1_len)
-			return -1;
+			return 0xFFu;
 		usb_ep1_ptr = 0;
 	}
 
@@ -484,7 +494,7 @@ uint8_t usb_ep2_tx_poll(void **data, uint8_t chunksize)
 	if (usb_ep2_len == 0) {
 		usb_ep2_len = usb_app_ep2_tx_poll(usb_ep2_buf);
 		if (!usb_ep2_len)
-			return -1;
+			return 0xFFu;
 		usb_ep2_ptr = 0;
 	}
 

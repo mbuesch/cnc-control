@@ -32,17 +32,17 @@ void long_delay_ms(uint16_t ms)
 	}
 }
 
-uint8_t hexdigit_to_ascii(uint8_t digit)
+char hexdigit_to_ascii(uint8_t digit)
 {
 	/* Convert a hexadecimal digit (0-F) to an ASCII character */
-	if (digit >= 0xA)
-		digit += 0x41 - 0xA;
+	if (digit >= 0xAu)
+		digit = (uint8_t)(digit + 0x41u - 0xAu);
 	else
-		digit += 0x30;
-	return digit;
+		digit = (uint8_t)(digit + 0x30u);
+	return (char)digit;
 }
 
-#ifndef IN_BOOT
+#ifndef BOOTLOADER
 void do_panic(const char PROGPTR *msg)
 {
 	irq_disable();
@@ -80,7 +80,7 @@ uint8_t ffs16(uint16_t value)
 	return 0;
 }
 
-#endif /* !IN_BOOT */
+#endif /* BOOTLOADER */
 
 #ifdef STACKCHECK
 

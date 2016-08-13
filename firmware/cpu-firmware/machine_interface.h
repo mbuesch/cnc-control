@@ -118,13 +118,17 @@ static inline uint8_t axis_is_angular(enum axis_id id)
 	case AXIS_B:
 	case AXIS_C:
 		return 1;
-	default:
+	case AXIS_X:
+	case AXIS_Y:
+	case AXIS_Z:
+	case AXIS_U:
+	case AXIS_V:
+	case AXIS_W:
+	case NR_AXIS:
 		break;
 	}
 	return 0;
 }
-
-#define control_crc8(crc, data)		_crc_ibutton_update(crc, data)
 
 enum control_id {
 	CONTROL_PING,			/* Pong request */

@@ -2,7 +2,7 @@
  *   CNC-remote-control
  *   CPU
  *
- *   Copyright (C) 2009-2011 Michael Buesch <m@bues.ch>
+ *   Copyright (C) 2009-2016 Michael Buesch <m@bues.ch>
  *
  *   This program is free software; you can redistribute it and/or
  *   modify it under the terms of the GNU General Public License
@@ -107,7 +107,7 @@ static char get_axis_name(uint8_t axis)
 
 	if (axis >= ARRAY_SIZE(names))
 		return '?';
-	return pgm_read(&names[axis]);
+	return (char)pgm_read(&names[axis]);
 }
 
 static uint8_t find_next_increment_index(uint8_t start)
@@ -190,9 +190,16 @@ static inline void extports_commit(void)
 	sr4094_put_data(&extports, sizeof(extports));
 }
 
-#define _extports_is_set(state, port_id)	(!!((state) & (port_id)))
-#define _extports_set(state, port_id)		do { state |= (port_id); } while (0)
-#define _extports_clear(state, port_id)		do { state &= ~(port_id); } while (0)
+#define _extports_is_set(state, port_id)			\
+	(!!((state) & (port_id)))
+
+#define _extports_set(state, port_id)		do {		\
+		(state) = (extports_t)((state) | (port_id));	\
+	} while (0)
+
+#define _extports_clear(state, port_id)		do {	\
+		(state) = (extports_t)((state) & ~(port_id));	\
+	} while (0)
 
 static void extports_set(uint16_t extport_id)
 {
@@ -238,8 +245,8 @@ static void coprocessor_init(void)
 		return;
 	}
 
-	GIFR |= (1 << SPI_MASTER_TRANSIRQ_INTF);
-	GICR |= (1 << SPI_MASTER_TRANSIRQ_INT);
+	GIFR = (1u << SPI_MASTER_TRANSIRQ_INTF);
+	GICR |= (1u << SPI_MASTER_TRANSIRQ_INT);
 }
 
 ISR(SPI_MASTER_TRANSIRQ_VECT)
@@ -301,7 +308,7 @@ void spi_async_done(void)
 	/* Update state. */
 	BUG_ON(!irqs_disabled());
 	state.buttons = spi_rx_data.low | ((uint16_t)spi_rx_data.high << 8);
-	state.jogwheel += (int8_t)spi_rx_data.enc;
+	state.jogwheel = (int8_t)(state.jogwheel + (int8_t)spi_rx_data.enc);
 }
 
 /* Spindle state may change at any time before or right after this check */
@@ -741,9 +748,9 @@ static void interpret_buttons(void)
 			 * related buttons as released. */
 			old_buttons = buttons;
 			if (!spindle_is_on())
-				buttons &= ~BTN_SPINDLE;
-			buttons &= ~(BTN_JOG_POSITIVE |
-				     BTN_JOG_NEGATIVE);
+				buttons = (uint16_t)(buttons & ~BTN_SPINDLE);
+			buttons = (uint16_t)(buttons & ~(BTN_JOG_POSITIVE |
+							 BTN_JOG_NEGATIVE));
 			if (old_buttons != buttons || jogwheel) {
 				state.twohand_error_delay = get_jiffies() +
 						msec2jiffies(200);
@@ -912,7 +919,7 @@ void set_axis_enable_mask(uint16_t mask)
 
 	state.axis_enable_mask = mask;
 	if (!(BIT(state.axis) & mask))
-		state.axis = ffs16(mask) - 1;
+		state.axis = (uint8_t)(ffs16(mask) - 1u);
 	mb();
 	update_userinterface();
 }

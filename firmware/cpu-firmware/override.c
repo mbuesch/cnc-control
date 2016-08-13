@@ -85,8 +85,8 @@ uint8_t override_get_pos(void)
 	if (adc == last_override_adc)
 		return last_override_pos;
 
-	pos = ((uint32_t)adc - (uint32_t)ADC_REAL_MIN) * (uint32_t)0xFF /
-	      ((uint32_t)ADC_REAL_MAX - (uint32_t)ADC_REAL_MIN);
+	pos = (uint8_t)(((uint32_t)adc - (uint32_t)ADC_REAL_MIN) * (uint32_t)0xFF /
+			((uint32_t)ADC_REAL_MAX - (uint32_t)ADC_REAL_MIN));
 
 	last_override_adc = adc;
 	last_override_pos = pos;

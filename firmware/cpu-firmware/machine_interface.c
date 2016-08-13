@@ -14,6 +14,7 @@
  *   GNU General Public License for more details.
  */
 
+#include "machine_interface.h"
 #include "machine_interface_internal.h"
 #include "usb.h"
 #include "usb_application.h"
@@ -317,7 +318,7 @@ uint8_t usb_app_ep2_rx(uint8_t *data, uint8_t size,
 	res = rx_raw_message(data, size, reply_buf, USBCFG_EP1_MAXSIZE);
 	if (res < 0)
 		return USB_APP_UNHANDLED;
-	return res;
+	return (uint8_t)res;
 }
 
 /* Interrupt endpoint */

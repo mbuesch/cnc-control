@@ -9,7 +9,7 @@
 #include "debug.h"
 
 /* Compile minimal USB stack for bootloader code */
-#ifdef IN_BOOT
+#ifdef BOOTLOADER
 # define USB_MINI		1
 #else
 # define USB_MINI		0

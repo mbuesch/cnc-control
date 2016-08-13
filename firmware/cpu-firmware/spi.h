@@ -9,10 +9,10 @@
 
 
 /* No async for the bootloader */
-#ifdef IN_APP
-# define SPI_HAVE_ASYNC		1
-#else
+#ifdef BOOTLOADER
 # define SPI_HAVE_ASYNC		0
+#else
+# define SPI_HAVE_ASYNC		1
 #endif
 
 
@@ -31,9 +31,9 @@ extern void spi_async_done(void);
 static inline void spi_slave_select(bool select)
 {
 	if (select)
-		PORTB &= ~(1 << 4/*SS*/);
+		PORTB = (uint8_t)(PORTB & ~(1u << 4/*SS*/));
 	else
-		PORTB |= (1 << 4/*SS*/);
+		PORTB = (uint8_t)(PORTB | (1u << 4/*SS*/));
 }
 
 uint8_t spi_transfer_sync(uint8_t tx);
