@@ -665,7 +665,7 @@ class CNCControl(object):
 			self.__epClearHalt(interface, EP_OUT)
 			self.__epClearHalt(interface, EP_IRQ)
 		except (usb.USBError), e:
-			self.__usbError(e, fatal=True)
+			self.__usbError(e, fatal=True, origin="init")
 		self.__devicePlug()
 		return True
 
@@ -751,14 +751,16 @@ class CNCControl(object):
 		self.__deviceUnplug()
 		CNCCFatal.error(message)
 
-	def __usbError(self, usbException, fatal=False):
+	def __usbError(self, usbException, fatal=False, origin=None):
 		if usbException.errno == errno.ENODEV or\
 		   str(usbException).lower().find("no such device") >= 0:
 			self.__deviceUnplugException("Unplug exception")
 		cls = CNCCFatal if fatal else CNCCException
-		cls.error("USB error: " + str(usbException))
+		cls.error("USB error%s: %s" %(
+			  ((" (%s)" % origin) if origin else ""),
+			  str(usbException)))
 
-	def eventWait(self, timeoutMs=25):
+	def eventWait(self, timeoutMs=30):
 		if not self.deviceAvailable:
 			self.__deviceUnplugException()
 		try:
@@ -767,10 +769,9 @@ class CNCControl(object):
 		except (usb.USBError), e:
 			if not e.errno:
 				return False # Timeout. No event.
-			self.__usbError(e)
-		if not data:
-			self.__deviceUnplugException("Zero length event")
-		self.__handleInterrupt(data)
+			self.__usbError(e, origin="eventWait")
+		if data:
+			self.__handleInterrupt(data)
 		return True
 
 	def __handleInterrupt(self, rawData):
@@ -827,13 +828,13 @@ class CNCControl(object):
 				CNCCException.error("Only wrote %d bytes of %d bytes "
 					"bulk write" % (size, len(rawData)))
 		except (usb.USBError), e:
-			self.__usbError(e)
+			self.__usbError(e, origin="controlMsg")
 
 	def controlReply(self, timeoutMs=300):
 		try:
 			data = self.usbh.bulkRead(EP_IN, ControlReply.MAX_SIZE, timeoutMs)
 		except (usb.USBError), e:
-			self.__usbError(e)
+			self.__usbError(e, origin="controlReply")
 		return ControlReply.parseRaw(data)
 
 	def controlMsgSyncReply(self, msg, timeoutMs=300):
