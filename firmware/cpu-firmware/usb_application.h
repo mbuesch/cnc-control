@@ -4,7 +4,7 @@
  *   Tiny USB stack
  *   Application level code
  *
- *   Copyright (C) 2009-2011 Michael Buesch <m@bues.ch>
+ *   Copyright (C) 2009-2016 Michael Buesch <m@bues.ch>
  *
  *   This program is free software; you can redistribute it and/or
  *   modify it under the terms of the GNU General Public License
@@ -24,7 +24,7 @@
 
 struct usb_ctrl;
 
-#define USB_APP_UNHANDLED	0xFF
+#define USB_APP_UNHANDLED	0xFFu
 
 
 /** usb_app_reset - Reset all state */
@@ -76,13 +76,14 @@ uint8_t usb_app_ep1_rx(uint8_t *data, uint8_t size,
 /** usb_app_ep1_tx_poll - Poll TX data for EP1.
  * @buffer: The buffer to write the data to.
  * The buffer size is USBCFG_EP1_MAXSIZE
+ * Returns USB_APP_UNHANDLED, if there is no data, yet.
  */
 #if USB_APP_HAVE_EP1TXPOLL
 uint8_t usb_app_ep1_tx_poll(void *buffer);
 #else
 static inline
 uint8_t usb_app_ep1_tx_poll(void *buffer)
-{ return 0; }
+{ return USB_APP_UNHANDLED; }
 #endif
 
 /** usb_app_ep2_rx - Handle a received EP2 frame in the app layer.
@@ -104,13 +105,14 @@ uint8_t usb_app_ep2_rx(uint8_t *data, uint8_t size,
 /** usb_app_ep2_tx_poll - Poll TX data for EP2.
  * @buffer: The buffer to write the data to.
  * The buffer size is USBCFG_EP2_MAXSIZE
+ * Returns USB_APP_UNHANDLED, if there is no data, yet.
  */
 #if USB_APP_HAVE_EP2TXPOLL
 uint8_t usb_app_ep2_tx_poll(void *buffer);
 #else
 static inline
 uint8_t usb_app_ep2_tx_poll(void *buffer)
-{ return 0; }
+{ return USB_APP_UNHANDLED; }
 #endif
 
 

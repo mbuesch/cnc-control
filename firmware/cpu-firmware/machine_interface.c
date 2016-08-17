@@ -332,7 +332,7 @@ uint8_t usb_app_ep1_tx_poll(void *buffer)
 
 	if (tlist_is_empty(&tx_queued)) {
 		irq_restore(sreg);
-		return 0;
+		return 0; /* Zero length reply */
 	}
 
 	e = tlist_first_entry(&tx_queued, struct tx_queue_entry, list);
@@ -357,7 +357,7 @@ uint8_t usb_app_ep1_tx_poll(void *buffer)
 
 uint8_t usb_app_ep2_tx_poll(void *buffer)
 {
-	return 0;
+	return USB_APP_UNHANDLED;
 }
 
 static bool interface_queue_interrupt(const struct control_interrupt *irq,

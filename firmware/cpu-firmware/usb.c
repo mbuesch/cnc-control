@@ -1,7 +1,7 @@
 /*
  *   Tiny USB stack
  *
- *   Copyright (C) 2009-2011 Michael Buesch <m@bues.ch>
+ *   Copyright (C) 2009-2016 Michael Buesch <m@bues.ch>
  *
  *   This program is free software; you can redistribute it and/or
  *   modify it under the terms of the GNU General Public License
@@ -455,9 +455,11 @@ uint8_t usb_ep1_tx_poll(void **data, uint8_t chunksize)
 
 	if (usb_ep1_len == 0) {
 		usb_ep1_len = usb_app_ep1_tx_poll(usb_ep1_buf);
-		if (!usb_ep1_len)
-			return 0xFFu;
+		if (usb_ep1_len == USB_APP_UNHANDLED)
+			return USB_TX_POLL_NONE;
 		usb_ep1_ptr = 0;
+		if (!usb_ep1_len)
+			return 0;
 	}
 
 	res = usb_generic_tx_poll(data, chunksize, usb_ep1_buf,
@@ -493,9 +495,11 @@ uint8_t usb_ep2_tx_poll(void **data, uint8_t chunksize)
 
 	if (usb_ep2_len == 0) {
 		usb_ep2_len = usb_app_ep2_tx_poll(usb_ep2_buf);
-		if (!usb_ep2_len)
-			return 0xFFu;
+		if (usb_ep2_len == USB_APP_UNHANDLED)
+			return USB_TX_POLL_NONE;
 		usb_ep2_ptr = 0;
+		if (!usb_ep2_len)
+			return 0;
 	}
 
 	res = usb_generic_tx_poll(data, chunksize, usb_ep2_buf,

@@ -254,7 +254,7 @@ uint8_t usb_control_setup_rx(struct usb_ctrl *ctl);
  * Called by the lowlevel device driver. */
 uint8_t usb_control_rx(void *data, uint8_t size);
 
-#define USB_TX_POLL_NONE	0xFF
+#define USB_TX_POLL_NONE	0xFFu
 
 /** usb_control_tx_poll - Poll TX data on control-EP.
  * Returns the number of octets or USB_TX_POLL_NONE on error.
