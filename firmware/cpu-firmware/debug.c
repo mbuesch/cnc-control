@@ -104,6 +104,8 @@ void debug_dumpmem(const void *_mem, uint8_t size)
 
 	if (!debug_enabled())
 		return;
+	if (!mem || !size)
+		return;
 
 	for (i = 0; i < size; i++) {
 		if (i % 16 == 0) {
