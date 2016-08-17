@@ -118,10 +118,15 @@ static uint16_t do_modify_devflags(uint16_t mask, uint16_t set)
 	uint16_t flags;
 
 	sreg = irq_disable_save();
+
 	flags = active_devflags;
 	flags |= mask & set;
 	flags &= ~mask | set;
-	active_devflags = flags;
+	if (flags != active_devflags) {
+		active_devflags = flags;
+		update_userinterface();
+	}
+
 	irq_restore(sreg);
 
 	return flags;
@@ -192,7 +197,6 @@ static int8_t rx_raw_message(const void *msg, uint8_t ctl_size,
 
 		flags = do_modify_devflags(ctl->devflags.mask,
 					   ctl->devflags.set);
-		update_userinterface();
 
 		init_control_reply(reply, REPLY_VAL16, 0, ctl->seqno);
 		reply->val16.value = flags;

@@ -513,19 +513,21 @@ static void interpret_one_softkey(bool sk, uint8_t index, uint8_t count)
 
 	if (!sk)
 		return;
+
 	/* Key was pressed */
 	sk_state = state.softkey[index];
 	sk_state++;
 	if (sk_state >= count)
 		sk_state = 0;
 	state.softkey[index] = sk_state;
+
+	update_userinterface();
 }
 
 static void interpret_softkeys(bool sk0, bool sk1)
 {
 	interpret_one_softkey(sk0, 0, NR_SK0_STATES);
 	interpret_one_softkey(sk1, 1, NR_SK1_STATES);
-	update_userinterface();
 }
 
 static void set_jog_keepalife_deadline(void)
@@ -778,7 +780,6 @@ static void interpret_buttons(void)
 			modify_devflags(DEVICE_FLG_ON, 0);
 		else
 			modify_devflags(DEVICE_FLG_ON, DEVICE_FLG_ON);
-		update_userinterface();
 	}
 
 	/* Spindle button */
@@ -864,7 +865,6 @@ static void interpret_buttons(void)
 				modify_devflags(DEVICE_FLG_G53COORDS,
 						DEVICE_FLG_G53COORDS);
 			}
-			update_userinterface();
 			break;
 		case SK0_VELOCITY:
 			break;
@@ -915,60 +915,92 @@ static void interpret_feed_override(bool force)
 /* Called in IRQ context! */
 void set_axis_enable_mask(uint16_t mask)
 {
+	uint8_t sreg;
+
 	BUG_ON(mask == 0);
 
-	state.axis_enable_mask = mask;
-	if (!(BIT(state.axis) & mask))
-		state.axis = (uint8_t)(ffs16(mask) - 1u);
-	mb();
-	update_userinterface();
+	sreg = irq_disable_save();
+	if (state.axis_enable_mask != mask) {
+		state.axis_enable_mask = mask;
+		if (!(BIT(state.axis) & mask))
+			state.axis = (uint8_t)(ffs16(mask) - 1u);
+		update_userinterface();
+	}
+	irq_restore(sreg);
 }
 
 /* Called in IRQ context! */
 void axis_pos_update(uint8_t axis, fixpt_t absolute_pos)
 {
+	uint8_t sreg;
+
 	BUG_ON(axis >= ARRAY_SIZE(state.positions));
 
-	state.positions[axis] = absolute_pos;
-	mb();
-	state.lcd_need_update = 1;
+	sreg = irq_disable_save();
+	if (state.positions[axis] != absolute_pos) {
+		state.positions[axis] = absolute_pos;
+		state.lcd_need_update = 1;
+	}
+	irq_restore(sreg);
 }
 
 /* Called in IRQ context! */
 void spindle_state_update(bool on)
 {
-	state.spindle_on = on;
-	mb();
-	update_userinterface();
+	uint8_t sreg;
+
+	sreg = irq_disable_save();
+	if (state.spindle_on != on) {
+		state.spindle_on = on;
+		update_userinterface();
+	}
+	irq_restore(sreg);
 }
 
 /* Called in IRQ context! */
 void feed_override_feedback_update(uint8_t percent)
 {
-	state.fo_feedback_percent = min(percent, 200);
-	mb();
-	update_userinterface();
+	uint8_t sreg;
+
+	percent = min(percent, 200);
+
+	sreg = irq_disable_save();
+	if (state.fo_feedback_percent != percent) {
+		state.fo_feedback_percent = percent;
+		update_userinterface();
+	}
+	irq_restore(sreg);
 }
 
 /* Called in IRQ context! */
 void set_estop_state(bool asserted)
 {
-	ATOMIC_STORE(state.estop, asserted);
-	update_userinterface();
+	uint8_t sreg;
+
+	sreg = irq_disable_save();
+	if ((bool)ATOMIC_LOAD(state.estop) != asserted) {
+		ATOMIC_STORE(state.estop, asserted);
+		update_userinterface();
+	}
+	irq_restore(sreg);
 }
 
 /* Called in IRQ context! */
 bool set_increment_at_index(uint8_t index, fixpt_t increment)
 {
+	uint8_t sreg;
+
 	if (index >= ARRAY_SIZE(state.increments))
 		return 0;
 	if (fixpt_is_neg(increment) ||
 	    increment > FLOAT_TO_FIXPT(9.999))
 		return 0;
 
+	sreg = irq_disable_save();
 	state.increments[index] = increment;
 	if (state.increments[state.increment_index] == INT32_TO_FIXPT(0))
 		state.increment_index = find_next_increment_index(0);
+	irq_restore(sreg);
 
 	return 1;
 }
