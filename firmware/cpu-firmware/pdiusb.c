@@ -151,9 +151,6 @@ typedef uint16_t trans_stat_t;
 static uint8_t pdiusb_buffer[PDIUSB_MAXSIZE];
 /* Suspend status */
 static uint8_t pdiusb_suspended;
-/* IRQ status */
-static uint16_t pdiusb_irq_status;
-
 
 
 static inline void pdiusb_command_mode(void)
@@ -417,33 +414,12 @@ static void handle_irq_dmaeot(void)
 ISR(PDIUSB_IRQ_VECTOR)
 {
 	uint16_t status;
-
-	status = pdiusb_command_r16(PDIUSB_CMD_IRQSTAT);
-	if (status) {
-		pdiusb_interrupt_disable();
-		pdiusb_irq_status = status;
-	}
-}
-
-void pdiusb_work(void)
-{
-	uint16_t status;
 	trans_stat_t trans;
 	bool ok;
 	void *buf;
 	uint8_t size;
 
-	/* Check status==0 without disabling IRQs first.
-	 * This might race with the interrupt handler, but it is safe.
-	 */
-	mb();
-	if (!pdiusb_irq_status)
-		return;
-
-	irq_disable();
-
-	status = pdiusb_irq_status;
-	pdiusb_irq_status = 0;
+	status = pdiusb_command_r16(PDIUSB_CMD_IRQSTAT);
 
 	if (status & PDIUSB_IST_BUSRST)
 		handle_irq_busrst();
@@ -507,9 +483,6 @@ void pdiusb_work(void)
 		}
 #endif
 	}
-
-	pdiusb_interrupt_enable();
-	irq_enable();
 }
 
 #if MCU_USES_CLKOUT

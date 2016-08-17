@@ -469,6 +469,6 @@ _mainfunc int main(void)
 		(1 << ISC01) | (0 << ISC00);
 	pdiusb_init();
 	irq_enable();
-	while (1)
-		pdiusb_work();
+	while (1) {
+	}
 }

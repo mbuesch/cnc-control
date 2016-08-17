@@ -1060,8 +1060,6 @@ int main(void)
 
 	irq_enable();
 	while (1) {
-		pdiusb_work();
-
 		j = get_jiffies();
 		if (time_after(j, next_ms_tick)) {
 			next_ms_tick = j + msec2jiffies(1);

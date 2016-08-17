@@ -118,6 +118,5 @@ enum pdiusb_ep_index {
 uint8_t pdiusb_configure_clkout(void);
 uint8_t pdiusb_init(void);
 void pdiusb_exit(void);
-void pdiusb_work(void);
 
 #endif /* PDIUSB_H_ */
