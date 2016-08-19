@@ -73,11 +73,12 @@ MAIN_CFLAGS		:= -mmcu=$(GCC_ARCH) -std=gnu11 -g0 -O$(O) \
 
 MAIN_LDFLAGS		:=
 
-CFLAGS			+= $(MAIN_CFLAGS)
-BOOT_CFLAGS		+= $(MAIN_CFLAGS) -DBOOTLOADER
+CFLAGS			:= $(MAIN_CFLAGS) $(CFLAGS)
+BOOT_CFLAGS		:= $(MAIN_CFLAGS) -DBOOTLOADER $(BOOT_CFLAGS)
 
-LDFLAGS			+= $(MAIN_LDFLAGS)
-BOOT_LDFLAGS		+= $(MAIN_LDFLAGS) -Wl,--section-start=.text=$(BOOT_OFFSET)
+LDFLAGS			:= $(MAIN_LDFLAGS) -fwhole-program $(LDFLAGS)
+BOOT_LDFLAGS		:= $(MAIN_LDFLAGS) -fwhole-program \
+			   -Wl,--section-start=.text=$(BOOT_OFFSET) $(BOOT_LDFLAGS)
 
 BIN			:= $(NAME).bin
 HEX			:= $(NAME).hex
@@ -168,13 +169,13 @@ endif
 all: $(HEX) $(if $(BOOT_SRCS),$(BOOT_HEX))
 
 %.s: %.c
-	$(QUIET_CC) $(CFLAGS) -S $*.c
+	$(QUIET_CC) $(CFLAGS) -fno-lto -S $*.c
 
 $(BIN): $(call OBJS,$(SRCS),$(OBJ_DIR))
-	$(QUIET_CC) $(CFLAGS) -o $(BIN) -fwhole-program $(call OBJS,$(SRCS),$(OBJ_DIR)) $(LDFLAGS)
+	$(QUIET_CC) $(CFLAGS) -o $(BIN) $(call OBJS,$(SRCS),$(OBJ_DIR)) $(LDFLAGS)
 
 $(BOOT_BIN): $(call OBJS,$(BOOT_SRCS),$(BOOT_OBJ_DIR))
-	$(QUIET_CC) $(BOOT_CFLAGS) -o $(BOOT_BIN) -fwhole-program $(call OBJS,$(BOOT_SRCS),$(BOOT_OBJ_DIR)) $(BOOT_LDFLAGS)
+	$(QUIET_CC) $(BOOT_CFLAGS) -o $(BOOT_BIN) $(call OBJS,$(BOOT_SRCS),$(BOOT_OBJ_DIR)) $(BOOT_LDFLAGS)
 
 $(HEX): $(BIN)
 	$(QUIET_OBJCOPY) -R.eeprom -O ihex $(BIN) $(HEX)
