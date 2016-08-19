@@ -62,10 +62,7 @@ boot-app: all
 	$(ADMIN_TOOL) --flash-cpu $(HEX)
 	$(ADMIN_TOOL) --exitboot
 
-descriptor_table.h: descriptor_table.py descriptor_generator.py
-	$(QUIET_PYTHON2) descriptor_table.py $(USB_VENDOR) $(USB_PRODUCT) > descriptor_table.h
-
-descriptor_table_mini.h: descriptor_table_mini.py descriptor_generator.py
-	$(QUIET_PYTHON2) descriptor_table_mini.py $(USB_VENDOR) $(USB_PRODUCT) > descriptor_table_mini.h
+$(GEN_SRCS) $(BOOT_GEN_SRCS): %.h: %.py descriptor_generator.py
+	$(QUIET_PYTHON2) $< $(USB_VENDOR) $(USB_PRODUCT) > $@
 
 .PHONY: boot-app
