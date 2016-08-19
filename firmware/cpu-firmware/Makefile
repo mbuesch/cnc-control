@@ -38,10 +38,10 @@ BOOT_INSTRUMENT_FUNC	:=
 # Additional compiler flags
 CFLAGS			:= -I.. $(if $(STACKCHECK),-DSTACKCHECK)
 LDFLAGS			:=
-SPARSEFLAGS		:=
+SPARSEFLAGS		:= -Wno-address-space
 BOOT_CFLAGS		:= -I..
 BOOT_LDFLAGS		:=
-BOOT_SPARSEFLAGS	:=
+BOOT_SPARSEFLAGS	:= -Wno-address-space
 
 # Additional "clean" and "distclean" target files
 CLEAN_FILES		:=

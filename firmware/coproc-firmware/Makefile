@@ -32,10 +32,10 @@ INSTRUMENT_FUNC		:=
 BOOT_INSTRUMENT_FUNC	:=
 
 # Additional compiler flags
-CFLAGS			:=
+CFLAGS			:= -I..
 LDFLAGS			:=
 SPARSEFLAGS		:=
-BOOT_CFLAGS		:=
+BOOT_CFLAGS		:= -I..
 BOOT_LDFLAGS		:=
 BOOT_SPARSEFLAGS	:=
 

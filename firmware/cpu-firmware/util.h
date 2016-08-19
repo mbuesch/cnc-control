@@ -11,8 +11,9 @@
 #define likely(x)		__builtin_expect(!!(x), 1)
 #define unlikely(x)		__builtin_expect(!!(x), 0)
 
-#undef offsetof
-#define offsetof(type, member)	((size_t)&((type *)0)->member)
+#ifndef offsetof
+# define offsetof(type, member)	((size_t)&((type *)0)->member)
+#endif
 
 #undef typeof
 #define typeof			__typeof__
