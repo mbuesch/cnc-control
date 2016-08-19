@@ -346,7 +346,8 @@ static void spi_init(void)
 	(void)SPDR; /* clear state */
 }
 
-_mainfunc int main(void)
+int main(void) _mainfunc;
+int main(void)
 {
 	irq_disable();
 	wdt_enable(WDTO_500MS);

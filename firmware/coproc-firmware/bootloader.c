@@ -138,6 +138,7 @@ static noreturn noinline void exit_bootloader(void)
 	irq_disable();
 	spi_disable();
 	disable_all_irq_sources();
+	wdt_enable(WDTO_2S);
 
 	route_irqs_to_application();
 	/* Jump to application code */
@@ -154,6 +155,7 @@ static bool verify_page(uint16_t page_address)
 	uint8_t i, data0, data1;
 
 	for (i = 0; i < ARRAY_SIZE(page_buffer); i++) {
+		wdt_reset();
 		data0 = page_buffer[i];
 		data1 = pgm_read_byte((void PROGPTR *)(void *)(page_address + i));
 		if (data0 != data1)
@@ -176,6 +178,7 @@ static void write_page(uint16_t page_address)
 	boot_page_erase(page_address);
 	boot_spm_busy_wait();
 	for (i = 0; i < SPM_PAGESIZE; i = (uint8_t)(i + 2u)) {
+		wdt_reset();
 		data = (uint16_t)(page_buffer[i]);
 		data |= ((uint16_t)(page_buffer[i + 1]) << 8);
 		boot_page_fill(page_address + i, data);
@@ -257,15 +260,25 @@ static void handle_spi(void)
 	}
 }
 
-_mainfunc int main(void)
+static uint8_t saved_mcucsr __attribute__((section(".noinit")));
+
+void early_init(void) __attribute__((naked, section(".init3"), used));
+void early_init(void)
 {
-	uint8_t mcucsr;
+	irq_disable();
+	saved_mcucsr = MCUCSR;
+	MCUCSR = 0;
+	wdt_enable(WDTO_2S);
+}
+
+int main(void) _mainfunc;
+int main(void)
+{
+	uint8_t mcucsr = saved_mcucsr;
 
 	irq_disable();
-	wdt_disable();
+	wdt_enable(WDTO_2S);
 
-	mcucsr = MCUCSR;
-	MCUCSR = 0;
 	if (!(mcucsr & (1 << PORF))) {
 		if ((mcucsr & (1 << WDRF)) ||
 		    (mcucsr & (1 << BORF)))
@@ -277,6 +290,7 @@ _mainfunc int main(void)
 
 	spi_init();
 	while (1) {
+		wdt_reset();
 		handle_spi();
 	}
 }

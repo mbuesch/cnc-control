@@ -1059,16 +1059,13 @@ void reset_device_state(void)
 	interpret_feed_override(1); /* Force-send override state */
 }
 
+int main(void) _mainfunc;
 int main(void)
 {
-	uint8_t mcucsr;
-
 	static jiffies_t next_ms_tick;
 	jiffies_t j;
 
 	irq_disable();
-	mcucsr = MCUCSR;
-	MCUCSR = 0;
 	wdt_enable(WDTO_500MS);
 	debug_init();
 
@@ -1076,8 +1073,6 @@ int main(void)
 	MCUCR = (0 << ISC11) | (0 << ISC10) |
 		(1 << ISC01) | (0 << ISC00);
 
-	if (mcucsr & (1 << WDRF))
-		debug_printf("WARNING: watchdog reset triggered\n");
 	lcd_init();
 	lcd_printf("CNC-Control %u.%u\nInitializing",
 		   VERSION_MAJOR, VERSION_MINOR);
