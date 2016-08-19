@@ -254,7 +254,7 @@ ISR(SPI_MASTER_TRANSIRQ_VECT)
 	ATOMIC_STORE(state.button_update_required, 1);
 }
 
-struct spi_rx_data {
+static struct spi_rx_data {
 	uint8_t _undefined;
 	uint8_t low;
 	uint8_t high;
