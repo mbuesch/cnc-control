@@ -38,9 +38,11 @@ MYSMARTUSB		:= mysmartusb.py
 DOXYGEN			:= doxygen
 PYTHON2			:= python2
 PYTHON3			:= python3
+SPARSE			:= sparse
 
-V			:= @		# Verbose build:  make V=1
-DEBUG			:= 0		# Debug build:  make DEBUG=1
+V			:= @		# Verbose build:	make V=1
+C			:= 0		# Sparsechecker build:	make C=1
+DEBUG			:= 0		# Debug build:		make DEBUG=1
 O			:= s		# Optimize flag
 Q			:= $(V:1=)
 QUIET_CC		= $(Q:@=@$(ECHO) '     CC       '$@;)$(CC)
@@ -50,6 +52,11 @@ QUIET_SIZE		= $(Q:@=@$(ECHO) '     SIZE     '$@;)$(SIZE)
 QUIET_PYTHON2		= $(Q:@=@$(ECHO) '     PYTHON2  '$@;)$(PYTHON2)
 QUIET_PYTHON3		= $(Q:@=@$(ECHO) '     PYTHON3  '$@;)$(PYTHON3)
 QUIET_RM		= $(Q:@=@$(ECHO) '     RM       '$@;)$(RM)
+ifeq ($(C),1)
+QUIET_SPARSE		= $(Q:@=@$(ECHO) '     SPARSE   '$@;)$(SPARSE)
+else
+QUIET_SPARSE		= @$(TRUE)
+endif
 
 FUNC_STACK_LIMIT	?= 128
 
@@ -79,6 +86,16 @@ BOOT_CFLAGS		:= $(MAIN_CFLAGS) -DBOOTLOADER $(BOOT_CFLAGS)
 LDFLAGS			:= $(MAIN_LDFLAGS) -fwhole-program $(LDFLAGS)
 BOOT_LDFLAGS		:= $(MAIN_LDFLAGS) -fwhole-program \
 			   -Wl,--section-start=.text=$(BOOT_OFFSET) $(BOOT_LDFLAGS)
+
+SPARSEFLAGS		:= $(subst gnu11,gnu99,$(CFLAGS)) \
+			   -D__STDC_HOSTED__=0 \
+			   -gcc-base-dir=/usr/lib/avr \
+			   -I/usr/lib/avr/include \
+			   -D__OS_main__=dllexport \
+			   -D__ATTR_PROGMEM__= \
+			   -D__AVR_ARCH__=5 \
+			   -D__AVR_$(subst atmega,ATmega,$(GCC_ARCH))__=1
+BOOT_SPARSEFLAGS	:= $(SPARSEFLAGS)
 
 BIN			:= $(NAME).bin
 HEX			:= $(NAME).hex
@@ -159,11 +176,13 @@ endif
 $(call OBJS,$(SRCS),$(OBJ_DIR)): $(OBJ_DIR)/%.o: %.c
 	@$(MKDIR) -p $(dir $@)
 	$(QUIET_CC) -o $@ -c $(CFLAGS) $<
+	$(QUIET_SPARSE) $(SPARSEFLAGS) $<
 
 ifneq ($(BOOT_SRCS),)
 $(call OBJS,$(BOOT_SRCS),$(BOOT_OBJ_DIR)): $(BOOT_OBJ_DIR)/%.o: %.c
 	@$(MKDIR) -p $(dir $@)
 	$(QUIET_CC) -o $@ -c $(BOOT_CFLAGS) $<
+	$(QUIET_SPARSE) $(BOOT_SPARSEFLAGS) $<
 endif
 
 all: $(HEX) $(if $(BOOT_SRCS),$(BOOT_HEX))
