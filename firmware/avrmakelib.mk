@@ -80,6 +80,15 @@ MAIN_CFLAGS		:= -mmcu=$(GCC_ARCH) -std=gnu11 -g0 -O$(O) \
 
 MAIN_LDFLAGS		:=
 
+MAIN_SPARSEFLAGS	:= -D__STDC_HOSTED__=0 \
+			   -gcc-base-dir=/usr/lib/avr \
+			   -I/usr/lib/avr/include \
+			   -D__OS_main__=dllexport \
+			   -D__ATTR_PROGMEM__= \
+			   -D__AVR_ARCH__=5 \
+			   -D__AVR_$(subst atmega,ATmega,$(GCC_ARCH))__=1 \
+			   -Wsparse-all
+
 CFLAGS			:= $(MAIN_CFLAGS) $(CFLAGS)
 BOOT_CFLAGS		:= $(MAIN_CFLAGS) -DBOOTLOADER $(BOOT_CFLAGS)
 
@@ -88,14 +97,9 @@ BOOT_LDFLAGS		:= $(MAIN_LDFLAGS) -fwhole-program \
 			   -Wl,--section-start=.text=$(BOOT_OFFSET) $(BOOT_LDFLAGS)
 
 SPARSEFLAGS		:= $(subst gnu11,gnu99,$(CFLAGS)) \
-			   -D__STDC_HOSTED__=0 \
-			   -gcc-base-dir=/usr/lib/avr \
-			   -I/usr/lib/avr/include \
-			   -D__OS_main__=dllexport \
-			   -D__ATTR_PROGMEM__= \
-			   -D__AVR_ARCH__=5 \
-			   -D__AVR_$(subst atmega,ATmega,$(GCC_ARCH))__=1
-BOOT_SPARSEFLAGS	:= $(SPARSEFLAGS)
+			   $(MAIN_SPARSEFLAGS) $(SPARSEFLAGS)
+BOOT_SPARSEFLAGS	:= $(subst gnu11,gnu99,$(BOOT_CFLAGS)) \
+			   $(MAIN_SPARSEFLAGS) $(BOOT_SPARSEFLAGS)
 
 BIN			:= $(NAME).bin
 HEX			:= $(NAME).hex

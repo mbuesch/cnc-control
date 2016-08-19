@@ -32,6 +32,8 @@ CFLAGS			:=
 BOOT_CFLAGS		:=
 LDFLAGS			:=
 BOOT_LDFLAGS		:=
+SPARSEFLAGS		:=
+BOOT_SPARSEFLAGS	:=
 
 # Additional "clean" and "distclean" target files
 CLEAN_FILES		:=
