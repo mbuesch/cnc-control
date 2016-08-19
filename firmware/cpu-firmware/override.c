@@ -2,7 +2,7 @@
  *   CNC-remote-control
  *   Feed override switch
  *
- *   Copyright (C) 2011 Michael Buesch <m@bues.ch>
+ *   Copyright (C) 2011-2016 Michael Buesch <m@bues.ch>
  *
  *   This program is free software; you can redistribute it and/or
  *   modify it under the terms of the GNU General Public License
@@ -25,7 +25,7 @@
 #include <avr/wdt.h>
 
 
-#define ADC_HYST		16
+#define ADC_HYST		4
 #define ADC_MINMAX_DEADBAND	4
 #define ADC_REAL_MIN		0
 #define ADC_REAL_MAX		0x3FF
