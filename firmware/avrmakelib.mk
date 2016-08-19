@@ -49,6 +49,7 @@ QUIET_OBJCOPY		= $(Q:@=@$(ECHO) '     OBJCOPY  '$@;)$(OBJCOPY)
 QUIET_SIZE		= $(Q:@=@$(ECHO) '     SIZE     '$@;)$(SIZE)
 QUIET_PYTHON2		= $(Q:@=@$(ECHO) '     PYTHON2  '$@;)$(PYTHON2)
 QUIET_PYTHON3		= $(Q:@=@$(ECHO) '     PYTHON3  '$@;)$(PYTHON3)
+QUIET_RM		= $(Q:@=@$(ECHO) '     RM       '$@;)$(RM)
 
 FUNC_STACK_LIMIT	?= 128
 
@@ -277,12 +278,17 @@ doxygen:
 	$(DOXYGEN) Doxyfile
 
 clean:
-	-$(RM) -rf $(OBJ_DIR) $(DEP_DIR) \
-		   $(BOOT_OBJ_DIR) $(BOOT_DEP_DIR) \
-		   $(BIN) $(BOOT_BIN) \
-		   *.pyc *.pyo __pycache__ \
-		   $(GEN_SRCS) $(BOOT_GEN_SRCS) \
-		   $(CLEAN_FILES)
+	-$(QUIET_RM) -rf \
+		$(OBJ_DIR) $(DEP_DIR) \
+		$(BOOT_OBJ_DIR) $(BOOT_DEP_DIR) \
+		$(BIN) $(BOOT_BIN) \
+		*.pyc *.pyo __pycache__ \
+		$(GEN_SRCS) $(BOOT_GEN_SRCS) \
+		$(CLEAN_FILES)
 
 distclean: clean
-	-$(RM) -f $(HEX) $(BOOT_HEX) $(EEP) *.s $(DISTCLEAN_FILES)
+	-$(QUIET_RM) -f \
+		$(HEX) $(BOOT_HEX) \
+		$(EEP) \
+		*.s \
+		$(DISTCLEAN_FILES)
