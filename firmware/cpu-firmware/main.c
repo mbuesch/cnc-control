@@ -729,6 +729,11 @@ static void update_button_led(bool btn_pressed, extports_t ledport)
 		extports_clear(ledport);
 }
 
+static void set_feed_override_keepalife_deadline(void)
+{
+	state.next_fo_keepalife = get_jiffies() + msec2jiffies(100);
+}
+
 static void interpret_buttons(void)
 {
 	uint16_t buttons, old_buttons, rising, falling;
@@ -779,10 +784,15 @@ static void interpret_buttons(void)
 
 	/* on/off button */
 	if (rising_edge(BTN_ONOFF)) {
-		if (devflag_is_set(DEVICE_FLG_ON))
+		if (devflag_is_set(DEVICE_FLG_ON)) {
+			/* Disable device. */
 			modify_devflags(DEVICE_FLG_ON, 0);
-		else
+		} else {
+			/* Enable device. */
 			modify_devflags(DEVICE_FLG_ON, DEVICE_FLG_ON);
+			set_jog_keepalife_deadline();
+			set_feed_override_keepalife_deadline();
+		}
 	}
 
 	/* Spindle button */
@@ -904,17 +914,15 @@ static void interpret_feed_override(bool force)
 		.flags		= IRQ_FLG_DROPPABLE,
 	};
 	uint8_t fostate;
-	jiffies_t now;
 	static uint8_t prev_state;
 
 	fostate = override_get_pos();
-	now = get_jiffies();
 
 	if (fostate != prev_state ||
 	    (devflag_is_set(DEVICE_FLG_ON) &&
-	     time_after(now, state.next_fo_keepalife)) ||
+	     time_after(get_jiffies(), state.next_fo_keepalife)) ||
 	    force) {
-		state.next_fo_keepalife = now + msec2jiffies(100);
+		set_feed_override_keepalife_deadline();
 
 		irq.feedoverride.state = fostate;
 		send_interrupt_discard_old(&irq,
@@ -1065,6 +1073,9 @@ void reset_device_state(void)
 	set_axis_enable_mask(BIT(AXIS_X) | BIT(AXIS_Y) | BIT(AXIS_Z) |
 			     BIT(AXIS_A));
 	reset_devflags();
+
+	set_jog_keepalife_deadline();
+	set_feed_override_keepalife_deadline();
 
 	update_userinterface();
 	interpret_feed_override(1); /* Force-send override state */
