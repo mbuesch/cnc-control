@@ -44,7 +44,7 @@ CFLAGS			+= -DSTACKCHECK=1 \
 endif
 
 # Additional "clean" and "distclean" target files
-CLEAN_FILES		:= descriptor_table*.h
+CLEAN_FILES		:=
 DISTCLEAN_FILES		:=
 
 
