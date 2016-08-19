@@ -20,6 +20,9 @@ ifeq ($(AVRDUDE_ARCH),)
 $(error AVRDUDE_ARCH not defined)
 endif
 
+_uppercase		= $(shell echo $(1) | tr a-z A-Z)
+_lowercase		= $(shell echo $(1) | tr A-Z a-z)
+
 # The toolchain definitions
 CC			:= avr-gcc
 OBJCOPY			:= avr-objcopy
@@ -90,7 +93,7 @@ MAIN_SPARSEFLAGS	:= -D__STDC_HOSTED__=0 \
 			   -D__OS_main__=dllexport \
 			   -D__ATTR_PROGMEM__= \
 			   -D__AVR_ARCH__=5 \
-			   -D__AVR_$(subst atmega,ATmega,$(GCC_ARCH))__=1 \
+			   -D__AVR_$(subst MEGA,mega,$(call _uppercase,$(GCC_ARCH)))__=1 \
 			   -Wsparse-all
 
 CFLAGS			:= $(MAIN_CFLAGS) \
