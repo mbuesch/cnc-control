@@ -80,6 +80,10 @@ MAIN_CFLAGS		:= -mmcu=$(GCC_ARCH) -std=gnu11 -g0 -O$(O) \
 
 MAIN_LDFLAGS		:=
 
+INSTRUMENT_CFLAGS	:= -DINSTRUMENT_FUNCTIONS=1 \
+			   -finstrument-functions \
+			   -finstrument-functions-exclude-file-list=.h
+
 MAIN_SPARSEFLAGS	:= -D__STDC_HOSTED__=0 \
 			   -gcc-base-dir=/usr/lib/avr \
 			   -I/usr/lib/avr/include \
@@ -89,12 +93,20 @@ MAIN_SPARSEFLAGS	:= -D__STDC_HOSTED__=0 \
 			   -D__AVR_$(subst atmega,ATmega,$(GCC_ARCH))__=1 \
 			   -Wsparse-all
 
-CFLAGS			:= $(MAIN_CFLAGS) $(CFLAGS)
-BOOT_CFLAGS		:= $(MAIN_CFLAGS) -DBOOTLOADER $(BOOT_CFLAGS)
+CFLAGS			:= $(MAIN_CFLAGS) \
+			   $(if $(INSTRUMENT_FUNC),$(INSTRUMENT_CFLAGS)) \
+			   $(CFLAGS)
 
-LDFLAGS			:= $(MAIN_LDFLAGS) -fwhole-program $(LDFLAGS)
+BOOT_CFLAGS		:= $(MAIN_CFLAGS) -DBOOTLOADER \
+			   $(if $(BOOT_INSTRUMENT_FUNC),$(INSTRUMENT_CFLAGS)) \
+			   $(BOOT_CFLAGS)
+
+LDFLAGS			:= $(MAIN_LDFLAGS) -fwhole-program \
+			   $(LDFLAGS)
+
 BOOT_LDFLAGS		:= $(MAIN_LDFLAGS) -fwhole-program \
-			   -Wl,--section-start=.text=$(BOOT_OFFSET) $(BOOT_LDFLAGS)
+			   -Wl,--section-start=.text=$(BOOT_OFFSET) \
+			   $(BOOT_LDFLAGS)
 
 SPARSEFLAGS		:= $(subst gnu11,gnu99,$(CFLAGS)) \
 			   $(MAIN_SPARSEFLAGS) $(SPARSEFLAGS)

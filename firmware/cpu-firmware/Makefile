@@ -1,3 +1,5 @@
+STACKCHECK		:=	# Set to 1 to enable stack instrumentation
+
 # Project name
 NAME			:= cnc-control.cpu
 
@@ -7,7 +9,7 @@ SRCS			:= main.c 4094.c debug.c uart.c util.c lcd.c \
 			   pdiusb.c usb.c spi.c
 GEN_SRCS		:= descriptor_table.h
 
-# Bootloader code
+# Bootloader source files
 BOOT_SRCS		:= bootloader.c usb.c pdiusb.c util.c uart.c spi.c
 BOOT_GEN_SRCS		:= descriptor_table_mini.h
 BOOT_OFFSET		:= 0x7000
@@ -29,21 +31,17 @@ FUNC_STACK_LIMIT	:= 32
 # Values can be:  avrisp2, mysmartusb
 PROGRAMMER		:= avrisp2
 
-STACKCHECK		:= 0	# Set to 1 to enable stack instrumentation
+# Instrumentation
+INSTRUMENT_FUNC		:= $(if $(STACKCHECK),1)
+BOOT_INSTRUMENT_FUNC	:=
 
 # Additional compiler flags
-CFLAGS			:= -I..
-BOOT_CFLAGS		:= -I..
+CFLAGS			:= -I.. $(if $(STACKCHECK),-DSTACKCHECK)
 LDFLAGS			:=
-BOOT_LDFLAGS		:=
 SPARSEFLAGS		:=
+BOOT_CFLAGS		:= -I..
+BOOT_LDFLAGS		:=
 BOOT_SPARSEFLAGS	:=
-
-ifeq ($(STACKCHECK),1)
-CFLAGS			+= -DSTACKCHECK=1 \
-			   -finstrument-functions \
-			   -finstrument-functions-exclude-file-list=.h
-endif
 
 # Additional "clean" and "distclean" target files
 CLEAN_FILES		:=

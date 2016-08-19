@@ -27,12 +27,16 @@ FUNC_STACK_LIMIT	:= 32
 # Values can be:  avrisp2, mysmartusb
 PROGRAMMER		:= avrisp2
 
+# Instrumentation
+INSTRUMENT_FUNC		:=
+BOOT_INSTRUMENT_FUNC	:=
+
 # Additional compiler flags
 CFLAGS			:=
-BOOT_CFLAGS		:=
 LDFLAGS			:=
-BOOT_LDFLAGS		:=
 SPARSEFLAGS		:=
+BOOT_CFLAGS		:=
+BOOT_LDFLAGS		:=
 BOOT_SPARSEFLAGS	:=
 
 # Additional "clean" and "distclean" target files
