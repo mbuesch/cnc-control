@@ -3,9 +3,11 @@ NAME			:= cnc-control.coproc
 
 # Project source files
 SRCS			:= main.c
+GEN_SRCS		:=
 
 # Bootloader code
 BOOT_SRCS		:= bootloader.c
+BOOT_GEN_SRCS		:=
 BOOT_OFFSET		:= 0x1800
 
 # CPU speed, in Hz

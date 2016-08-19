@@ -3,11 +3,13 @@ NAME			:= cnc-control.cpu
 
 # Project source files
 SRCS			:= main.c 4094.c debug.c uart.c util.c lcd.c \
-		  override.c machine_interface.c \
-		  pdiusb.c usb.c spi.c
+			   override.c machine_interface.c \
+			   pdiusb.c usb.c spi.c
+GEN_SRCS		:= descriptor_table.h
 
 # Bootloader code
 BOOT_SRCS		:= bootloader.c usb.c pdiusb.c util.c uart.c spi.c
+BOOT_GEN_SRCS		:= descriptor_table_mini.h
 BOOT_OFFSET		:= 0x7000
 
 # CPU speed, in Hz

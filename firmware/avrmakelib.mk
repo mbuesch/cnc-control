@@ -137,14 +137,14 @@ OBJS = $(sort $(patsubst %.c,$(2)/%.o,$(1)))
 $(call DEPS,$(SRCS),$(DEP_DIR)): $(DEP_DIR)/%.d: %.c
 	@$(MKDIR) -p $(dir $@)
 	@$(MKDIR) -p $(OBJ_DIR)
-	$(QUIET_DEPEND) -o $@.tmp -MM -MG -MT "$@ $(patsubst $(DEP_DIR)/%.d,$(OBJ_DIR)/%.o,$@)" $(CFLAGS) $<
+	$(QUIET_DEPEND) -o $@.tmp -MM $(if $(GEN_SRCS),-MG) -MT "$@ $(patsubst $(DEP_DIR)/%.d,$(OBJ_DIR)/%.o,$@)" $(CFLAGS) $<
 	@$(MV) -f $@.tmp $@
 
 ifneq ($(BOOT_SRCS),)
 $(call DEPS,$(BOOT_SRCS),$(BOOT_DEP_DIR)): $(BOOT_DEP_DIR)/%.d: %.c
 	@$(MKDIR) -p $(dir $@)
 	@$(MKDIR) -p $(BOOT_OBJ_DIR)
-	$(QUIET_DEPEND) -o $@.tmp -MM -MG -MT "$@ $(patsubst $(BOOT_DEP_DIR)/%.d,$(BOOT_OBJ_DIR)/%.o,$@)" $(BOOT_CFLAGS) $<
+	$(QUIET_DEPEND) -o $@.tmp -MM $(if $(BOOT_GEN_SRCS),-MG) -MT "$@ $(patsubst $(BOOT_DEP_DIR)/%.d,$(BOOT_OBJ_DIR)/%.o,$@)" $(BOOT_CFLAGS) $<
 	@$(MV) -f $@.tmp $@
 endif
 
