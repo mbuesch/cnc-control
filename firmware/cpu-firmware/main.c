@@ -66,6 +66,7 @@ struct device_state {
 	fixpt_t jog_velocity;		/* Jogging velocity */
 	jiffies_t next_jog_keepalife;	/* Deadline of next jog keepalife */
 	uint8_t fo_feedback_percent;	/* Feed override feedback percentage */
+	jiffies_t next_fo_keepalife;	/* Deadline of next feed override keepalife */
 
 	/* The current axis positions.
 	 * Updated in IRQ context! */
@@ -635,6 +636,8 @@ static void handle_jog_keepalife(void)
 
 	if (state.jog == JOG_STOPPED)
 		return;
+	if (!devflag_is_set(DEVICE_FLG_ON))
+		return;
 	if (time_before(get_jiffies(), state.next_jog_keepalife))
 		return;
 
@@ -901,15 +904,23 @@ static void interpret_feed_override(bool force)
 		.flags		= IRQ_FLG_DROPPABLE,
 	};
 	uint8_t fostate;
+	jiffies_t now;
 	static uint8_t prev_state;
 
 	fostate = override_get_pos();
-	if (fostate == prev_state && !force)
-		return;
-	prev_state = fostate;
+	now = get_jiffies();
 
-	irq.feedoverride.state = fostate;
-	send_interrupt_discard_old(&irq, CONTROL_IRQ_SIZE(feedoverride));
+	if (fostate != prev_state ||
+	    (devflag_is_set(DEVICE_FLG_ON) &&
+	     time_after(now, state.next_fo_keepalife)) ||
+	    force) {
+		state.next_fo_keepalife = now + msec2jiffies(100);
+
+		irq.feedoverride.state = fostate;
+		send_interrupt_discard_old(&irq,
+					   CONTROL_IRQ_SIZE(feedoverride));
+	}
+	prev_state = fostate;
 }
 
 /* Called in IRQ context! */
