@@ -274,10 +274,13 @@ void early_init(void)
 int main(void) _mainfunc;
 int main(void)
 {
-	uint8_t mcucsr = saved_mcucsr;
+	uint8_t mcucsr;
 
 	irq_disable();
 	wdt_enable(WDTO_2S);
+
+	mcucsr = saved_mcucsr;
+	saved_mcucsr = 0;
 
 	if (!(mcucsr & (1 << PORF))) {
 		if ((mcucsr & (1 << WDRF)) ||

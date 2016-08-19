@@ -449,9 +449,12 @@ void early_init(void)
 int main(void) _mainfunc;
 int main(void)
 {
-	uint8_t mcucsr = saved_mcucsr;
+	uint8_t mcucsr;
 
 	wdt_enable(WDTO_2S);
+
+	mcucsr = saved_mcucsr;
+	saved_mcucsr = 0;
 
 	uart_init();
 	uart_putstr("BOOT\n");
