@@ -373,7 +373,7 @@ class CNCControlHAL(CNCControl):
 def main():
 	try:
 		try:
-			os.nice(-5)
+			os.nice(-20)
 		except (OSError), e:
 			print "WARNING: Failed to renice cnccontrol HAL module:", str(e)
 		cncc = CNCControlHAL()
