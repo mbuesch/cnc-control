@@ -1,5 +1,5 @@
 INSTALL		:= install
-PYTHON2		:= python2
+PYTHON		:= python3
 RM		:= rm
 
 PREFIX		:= /usr/local
@@ -12,7 +12,7 @@ clean:
 	@true
 
 install:
-	$(PYTHON2) setup_driver.py install --prefix "$(DESTDIR)$(PREFIX)"
+	$(PYTHON) setup_driver.py install --prefix "$(DESTDIR)$(PREFIX)"
 	$(RM) -rf build
 	$(INSTALL) -d $(DESTDIR)$(PREFIX)/bin
 	$(INSTALL) emc2hal_cnccontrol.py $(DESTDIR)$(PREFIX)/bin/
