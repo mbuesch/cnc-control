@@ -121,10 +121,10 @@ class CNCControlHAL(CNCControl):
 			try:
 				os.stat(fn)
 				return True
-			except (OSError), e:
+			except (OSError) as e:
 				if e.errno in {errno.EPERM, errno.EACCES}:
 					return True
-		print "CNC-Control: EMC2 doesn't seem to be running"
+		print("CNC-Control: EMC2 doesn't seem to be running")
 		raise KeyboardInterrupt
 
 	def __createHalPins(self):
@@ -214,9 +214,8 @@ class CNCControlHAL(CNCControl):
 		self.setTwohandEnabled(h["config.twohand"])
 		for i in range(0, ControlMsgSetincrement.MAX_INDEX + 1):
 			self.setIncrementAtIndex(i, h["jog.increment.%d" % i])
-		axes = map(lambda ax: ax if h["axis.%s.enable" % ax] else "",
-			   ALL_AXES)
-		self.setEnabledAxes(filter(None, axes))
+		axes = [ax if h["axis.%s.enable" % ax] else "" for ax in ALL_AXES]
+		self.setEnabledAxes([_f for _f in axes if _f])
 
 	def __pingDevice(self):
 		for i in range(0, 3):
@@ -341,10 +340,10 @@ class CNCControlHAL(CNCControl):
 				self.tk.update()
 				# Update pins, even if we didn't receive an event.
 				self.__updatePins()
-			except (CNCCFatal), e:
+			except (CNCCFatal) as e:
 				raise # Drop out of event loop and re-probe device.
-			except (CNCCException), e:
-				print "CNC-Control error: " + str(e)
+			except (CNCCException) as e:
+				print("CNC-Control error: " + str(e))
 			if not timeDebug:
 				continue
 			self.tk.update()
@@ -352,8 +351,8 @@ class CNCControlHAL(CNCControl):
 			avgRuntime = (avgRuntime + runtime) // 2
 			if start.second != lastRuntimePrint:
 				lastRuntimePrint = start.second
-				print "Average event loop runtime = %.1f milliseconds" %\
-					(float(avgRuntime) / 1000)
+				print("Average event loop runtime = %.1f milliseconds" %\
+					(float(avgRuntime) / 1000))
 
 	def probeLoop(self):
 		self.__resetHalOutputPins()
@@ -364,25 +363,25 @@ class CNCControlHAL(CNCControl):
 					self.__eventLoop()
 				else:
 					time.sleep(0.2)
-			except (CNCCFatal), e:
-				print "CNC-Control fatal error: " + str(e)
-			except (CNCCException), e:
-				print "CNC-Control error: " + str(e)
+			except (CNCCFatal) as e:
+				print("CNC-Control fatal error: " + str(e))
+			except (CNCCException) as e:
+				print("CNC-Control error: " + str(e))
 			self.__resetHalOutputPins()
 
 def main():
 	try:
 		try:
 			os.nice(-20)
-		except (OSError), e:
-			print "WARNING: Failed to renice cnccontrol HAL module:", str(e)
+		except (OSError) as e:
+			print("WARNING: Failed to renice cnccontrol HAL module:", str(e))
 		cncc = CNCControlHAL()
 		cncc.probeLoop()
-	except (CNCCException), e:
-		print "CNC-Control: Unhandled exception: " + str(e)
+	except (CNCCException) as e:
+		print("CNC-Control: Unhandled exception: " + str(e))
 		return 1
-	except (KeyboardInterrupt), e:
-		print "CNC-Control: shutdown"
+	except (KeyboardInterrupt) as e:
+		print("CNC-Control: shutdown")
 		return 0
 
 if __name__ == "__main__":

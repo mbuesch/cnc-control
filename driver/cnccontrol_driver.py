@@ -22,7 +22,7 @@ EP_OUT		= 0x02
 EP_IRQ		= 0x81
 
 ALL_AXES	= "xyzuvwabc"
-AXIS2NUMBER	= dict(map(lambda x: (x[1], x[0]), enumerate(ALL_AXES)))
+AXIS2NUMBER	= dict([(x[1], x[0]) for x in enumerate(ALL_AXES)])
 NUMBER2AXIS	= dict(enumerate(ALL_AXES))
 
 
@@ -53,11 +53,11 @@ def crc8Buf(crc, iterable):
 class CNCCException(Exception):
 	@classmethod
 	def info(cls, message):
-		print "CNC-Control:", message
+		print("CNC-Control:", message)
 
 	@classmethod
 	def warn(cls, message):
-		print "CNC-Control WARNING:", message
+		print("CNC-Control WARNING:", message)
 
 	@classmethod
 	def error(cls, message):
@@ -94,7 +94,7 @@ class FixPt(object):
 			raw = twos32(val[0] | (val[1] << 8) |\
 				     (val[2] << 16) | (val[3] << 24))
 			self.floatval = round(float(raw) / float(1 << self.FIXPT_FRAC_BITS), 4)
-		except (TypeError, IndexError), e:
+		except (TypeError, IndexError) as e:
 			CNCCException.error("FixPt TypeError")
 
 	@classmethod
@@ -573,8 +573,7 @@ class ControlIrqLogmsg(ControlIrq):
 	def __init__(self, msg, hdrFlags=0, hdrSeqno=0):
 		ControlIrq.__init__(self, ControlIrq.IRQ_LOGMSG,
 				    hdrFlags, hdrSeqno)
-		self.msg = "".join(map(lambda c: c if type(c) == str else chr(c),
-				       msg))
+		self.msg = "".join([c if type(c) == str else chr(c) for c in msg])
 
 	def __repr__(self):
 		return "LOGMSG interrupt (nr%d)" % (self.seqno)
@@ -615,8 +614,7 @@ class CNCControl(object):
 
 	@staticmethod
 	def __haveEndpoint(interface, epAddress):
-		found = filter(lambda ep: ep.address == epAddress,
-			       interface.endpoints)
+		found = [ep for ep in interface.endpoints if ep.address == epAddress]
 		return bool(found)
 
 	def __epClearHalt(self, interface, epAddress):
@@ -664,7 +662,7 @@ class CNCControl(object):
 			self.__epClearHalt(interface, EP_IN)
 			self.__epClearHalt(interface, EP_OUT)
 			self.__epClearHalt(interface, EP_IRQ)
-		except (usb.USBError), e:
+		except (usb.USBError) as e:
 			self.__usbError(e, fatal=True, origin="init")
 		self.__devicePlug()
 		return True
@@ -691,7 +689,7 @@ class CNCControl(object):
 			try:
 				if self.probe():
 					return True
-			except (CNCCException), e:
+			except (CNCCException) as e:
 				pass
 			time.sleep(0.05)
 		return False
@@ -766,7 +764,7 @@ class CNCControl(object):
 		try:
 			data = self.usbh.interruptRead(EP_IRQ, ControlIrq.MAX_SIZE,
 						       timeoutMs)
-		except (usb.USBError), e:
+		except (usb.USBError) as e:
 			if not e.errno:
 				return False # Timeout. No event.
 			self.__usbError(e, origin="eventWait")
@@ -789,8 +787,8 @@ class CNCControl(object):
 				  incremental = not cont,
 				  velocity = velocity)
 		elif irq.id == ControlIrq.IRQ_JOG_KEEPALIFE:
-			map(lambda ax: self.jogStates[ax].keepAlife(),
-			    self.jogStates)
+			list(map(lambda ax: self.jogStates[ax].keepAlife(),
+			    self.jogStates))
 		elif irq.id == ControlIrq.IRQ_SPINDLE:
 			irq2direction = {
 				ControlMsgSpindleupdate.SPINDLE_OFF:	0,
@@ -804,14 +802,14 @@ class CNCControl(object):
 			self.__interpretDevFlags(irq.devFlags)
 		elif irq.id == ControlIrq.IRQ_HALT:
 			self.motionHaltRequest = True
-			for jogState in self.jogStates.values():
+			for jogState in list(self.jogStates.values()):
 				jogState.reset()
 			self.spindleCommand = 0
 		elif irq.id == ControlIrq.IRQ_LOGMSG:
 			msg = self.logMsgBuf + irq.msg
 			msg = msg.split('\n')
 			while len(msg) > 1:
-				print "[dev debug]:", msg[0]
+				print("[dev debug]:", msg[0])
 				msg = msg[1:]
 			self.logMsgBuf = msg[0]
 		else:
@@ -827,13 +825,13 @@ class CNCControl(object):
 			if len(rawData) != size:
 				CNCCException.error("Only wrote %d bytes of %d bytes "
 					"bulk write" % (size, len(rawData)))
-		except (usb.USBError), e:
+		except (usb.USBError) as e:
 			self.__usbError(e, origin="controlMsg")
 
 	def controlReply(self, timeoutMs=300):
 		try:
 			data = self.usbh.bulkRead(EP_IN, ControlReply.MAX_SIZE, timeoutMs)
-		except (usb.USBError), e:
+		except (usb.USBError) as e:
 			self.__usbError(e, origin="controlReply")
 		return ControlReply.parseRaw(data)
 

@@ -90,9 +90,9 @@ class IHEXParser(object):
 						image[(i - 9) / 2 + addr] = int(line[i:i+2], 16)
 					continue
 				raise CNCCException("Invalid ihex file format (unsup type %d)" % recordType)
-		except (ValueError), e:
+		except (ValueError) as e:
 			raise CNCCException("Invalid ihex file format (digit format)")
-		except (IOError), e:
+		except (IOError) as e:
 			raise CNCCException("Failed to read file %s: %s" % (ihexfile, str(e)))
 		self.image = image
 
@@ -111,28 +111,28 @@ class Context(object):
 def handle_cpu_context(context, arg):
 	cncc = context.getCNCC()
 	if cncc.deviceRunsBootloader():
-		print "The CPU is running in BOOTLOADER code"
+		print("The CPU is running in BOOTLOADER code")
 	else:
-		print "The CPU is running in APPLICATION code"
+		print("The CPU is running in APPLICATION code")
 
 def handle_verbose_debug(context, enable):
 	enable = arg2bool(enable)
 	cncc = context.getCNCC()
 	devFlagsSet = 0
 	if enable:
-		print "Enabling verbose debug mode..."
+		print("Enabling verbose debug mode...")
 		devFlagsSet = ControlMsgDevflags.DEVICE_FLG_VERBOSEDBG
 	else:
-		print "Disabling verbose debug mode..."
+		print("Disabling verbose debug mode...")
 	msg = ControlMsgDevflags(ControlMsgDevflags.DEVICE_FLG_VERBOSEDBG,
 				 devFlagsSet)
 	reply = cncc.controlMsgSyncReply(msg)
 	if not reply.isOK():
 		raise CNCCException("Failed to set device flags: %s" % str(reply))
-	print "Device flags:", reply
+	print("Device flags:", reply)
 
 def handle_enterboot(context, arg):
-	print "Entering bootloader..."
+	print("Entering bootloader...")
 	cncc = context.getCNCC()
 	if not cncc.deviceRunsBootloader():
 		# Enter CPU bootloader
@@ -155,7 +155,7 @@ def handle_enterboot(context, arg):
 		raise CNCCException("Failed to enter coprocessor bootloader: %s" % str(reply))
 
 def handle_exitboot(context, arg):
-	print "Exiting bootloader..."
+	print("Exiting bootloader...")
 	cncc = context.getCNCC()
 	if not cncc.deviceRunsBootloader():
 		return
@@ -163,7 +163,7 @@ def handle_exitboot(context, arg):
 	msg = ControlMsgExitboot(ControlMsg.TARGET_COPROC)
 	reply = cncc.controlMsgSyncReply(msg, timeoutMs=1000)
 	if not reply.isOK():
-		print "Failed to exit coprocessor bootloader: %s" % str(reply)
+		print("Failed to exit coprocessor bootloader: %s" % str(reply))
 	# Exit CPU bootloader
 	msg = ControlMsgExitboot(ControlMsg.TARGET_CPU)
 	cncc.controlMsg(msg)
@@ -192,26 +192,26 @@ def __flashImage(context, ihexfile, offset, size, pageSize, targetMCU):
 			raise CNCCException("Failed to flash page: %s" % str(reply))
 
 def handle_flash_cpu(context, ihexfile):
-	print "Flashing CPU image"
+	print("Flashing CPU image")
 	__flashImage(context, ihexfile, 0, CPU_APP_SIZE, CPU_PAGE_SIZE,
 		     ControlMsg.TARGET_CPU)
 
 def handle_flash_coprocessor(context, ihexfile):
-	print "Flashing coprocessor image"
+	print("Flashing coprocessor image")
 	__flashImage(context, ihexfile, 0, COPROC_APP_SIZE, COPROC_PAGE_SIZE,
 		     ControlMsg.TARGET_COPROC)
 
 def usage():
-	print "admin.py [OPTIONS]"
-	print ""
-	print " -c|--cpu-context            Find out the CPU context (boot or app)"
-	print ""
-	print " -V|--verbose-debug BOOL     Enable/disable verbose debugging messages."
-	print ""
-	print " -b|--enterboot              Enter the CPU and coproc bootloader"
-	print " -x|--exitboot               Exit the CPU and coproc bootloader"
-	print " -f|--flash-cpu IHEX         Flash an ihex file to the CPU"
-	print " -F|--flash-coproc IHEX      Flash an ihex file to the coprocessor"
+	print("admin.py [OPTIONS]")
+	print("")
+	print(" -c|--cpu-context            Find out the CPU context (boot or app)")
+	print("")
+	print(" -V|--verbose-debug BOOL     Enable/disable verbose debugging messages.")
+	print("")
+	print(" -b|--enterboot              Enter the CPU and coproc bootloader")
+	print(" -x|--exitboot               Exit the CPU and coproc bootloader")
+	print(" -f|--flash-cpu IHEX         Flash an ihex file to the CPU")
+	print(" -F|--flash-coproc IHEX      Flash an ihex file to the coprocessor")
 
 def main():
 	actions = []
@@ -252,14 +252,14 @@ def main():
 
 	try:
 		if not actions:
-			print "No action specified"
+			print("No action specified")
 			return 1
 		context = Context()
 		for action in actions:
 			handler = handlers[action[0]]
 			handler(context, action[1])
-	except (CNCCException), e:
-		print "CNC Control exception: %s" % str(e)
+	except (CNCCException) as e:
+		print("CNC Control exception: %s" % str(e))
 		return 1
 	return 0
 
