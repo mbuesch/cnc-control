@@ -1,9 +1,9 @@
 # ---------------------------------------
 # --- CNC Control
-# --- EMC2 HAL configuration file
+# --- LinuxCNC HAL configuration file
 # ------
 
-loadusr -Wn cnccontrol emc2hal_cnccontrol
+loadusr -Wn cnccontrol linuxcnchal_cnccontrol
 
 
 # --- Device config ---

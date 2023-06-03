@@ -1,2 +1,2 @@
-Defaults env_keep += "PYTHONPATH EMC2_HOME"
-%plugdev ALL = NOPASSWD: /usr/local/bin/emc2hal_cnccontrol.py
+Defaults env_keep += "PYTHONPATH LINUXCNC_HOME"
+%plugdev ALL = NOPASSWD: /usr/local/bin/linuxcnchal_cnccontrol.py

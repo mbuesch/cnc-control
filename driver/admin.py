@@ -3,7 +3,7 @@
 #   CNC-remote-control
 #   Admin tool
 #
-#   Copyright (C) 2011 Michael Buesch <m@bues.ch>
+#   Copyright (C) 2011-2023 Michael Büsch <m@bues.ch>
 #
 #   This program is free software; you can redistribute it and/or
 #   modify it under the terms of the GNU General Public License
