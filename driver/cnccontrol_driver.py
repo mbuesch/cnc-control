@@ -3,7 +3,7 @@
 #
 # CNC-control - Host driver
 #
-# Copyright (C) 2011 Michael Buesch <m@bues.ch>
+# Copyright (C) 2011-2023 Michael Büsch <m@bues.ch>
 #
 """
 
@@ -22,7 +22,7 @@ EP_OUT		= 0x02
 EP_IRQ		= 0x81
 
 ALL_AXES	= "xyzuvwabc"
-AXIS2NUMBER	= dict([(x[1], x[0]) for x in enumerate(ALL_AXES)])
+AXIS2NUMBER	= dict((x[1], x[0]) for x in enumerate(ALL_AXES))
 NUMBER2AXIS	= dict(enumerate(ALL_AXES))
 
 
@@ -66,7 +66,7 @@ class CNCCException(Exception):
 class CNCCFatal(CNCCException):
 	pass
 
-class FixPt(object):
+class FixPt:
 	FIXPT_FRAC_BITS		= 16
 	MIN_INT_LIMIT		= -(1 << (FIXPT_FRAC_BITS - 1))
 	MIN_LIMIT		= float(MIN_INT_LIMIT) - 0.99999
@@ -133,7 +133,7 @@ class FixPt(object):
 	def isNegative(self):
 		return bool(self.raw[3] & 0x80)
 
-class ControlMsg(object):
+class ControlMsg:
 	# IDs
 	CONTROL_PING			= 0
 	CONTROL_RESET			= 1
@@ -352,7 +352,7 @@ class ControlMsgBootFlashpg(ControlMsg):
 		raw.append(self.target & 0xFF)
 		return raw
 
-class ControlReply(object):
+class ControlReply:
 	MAX_SIZE		= 6
 
 	# IDs
@@ -450,7 +450,7 @@ class ControlReplyVal16(ControlReply):
 	def isOK(self):
 		return True
 
-class ControlIrq(object):
+class ControlIrq:
 	MAX_SIZE		= 14
 
 	# IDs
@@ -578,7 +578,7 @@ class ControlIrqLogmsg(ControlIrq):
 	def __repr__(self):
 		return "LOGMSG interrupt (nr%d)" % (self.seqno)
 
-class JogState(object):
+class JogState:
 	KEEPALIFE_TIMEOUT = 0.3
 	STOPDATA = (FixPt(0.0), False, FixPt(0.0))
 
@@ -604,10 +604,9 @@ class JogState(object):
 		self.set(self.STOPDATA[0], self.STOPDATA[1], self.STOPDATA[2])
 
 	def keepAlife(self):
-		self.__timeout = datetime.now() +\
-			timedelta(seconds=self.KEEPALIFE_TIMEOUT)
+		self.__timeout = datetime.now() + timedelta(seconds=self.KEEPALIFE_TIMEOUT)
 
-class CNCControl(object):
+class CNCControl:
 	def __init__(self, verbose=False):
 		self.deviceAvailable = False
 		self.verbose = verbose
@@ -662,7 +661,7 @@ class CNCControl(object):
 			self.__epClearHalt(interface, EP_IN)
 			self.__epClearHalt(interface, EP_OUT)
 			self.__epClearHalt(interface, EP_IRQ)
-		except (usb.USBError) as e:
+		except usb.USBError as e:
 			self.__usbError(e, fatal=True, origin="init")
 		self.__devicePlug()
 		return True
@@ -689,7 +688,7 @@ class CNCControl(object):
 			try:
 				if self.probe():
 					return True
-			except (CNCCException) as e:
+			except CNCCException as e:
 				pass
 			time.sleep(0.05)
 		return False
@@ -764,7 +763,7 @@ class CNCControl(object):
 		try:
 			data = self.usbh.interruptRead(EP_IRQ, ControlIrq.MAX_SIZE,
 						       timeoutMs)
-		except (usb.USBError) as e:
+		except usb.USBError as e:
 			if not e.errno:
 				return False # Timeout. No event.
 			self.__usbError(e, origin="eventWait")
@@ -776,7 +775,6 @@ class CNCControl(object):
 		irq = ControlIrq.parseRaw(rawData)
 		if irq.flags & ControlIrq.IRQ_FLG_TXQOVR:
 			CNCCException.warn("Interrupt queue overflow detected")
-#		print irq
 		if irq.id == ControlIrq.IRQ_JOG:
 			cont = bool(irq.jogFlags & ControlIrqJog.IRQ_JOG_CONTINUOUS)
 			velocity = irq.velocity
@@ -787,8 +785,8 @@ class CNCControl(object):
 				  incremental = not cont,
 				  velocity = velocity)
 		elif irq.id == ControlIrq.IRQ_JOG_KEEPALIFE:
-			list(map(lambda ax: self.jogStates[ax].keepAlife(),
-			    self.jogStates))
+			for jogState in self.jogStates.values():
+				jogState.keepAlife()
 		elif irq.id == ControlIrq.IRQ_SPINDLE:
 			irq2direction = {
 				ControlMsgSpindleupdate.SPINDLE_OFF:	0,
@@ -802,7 +800,7 @@ class CNCControl(object):
 			self.__interpretDevFlags(irq.devFlags)
 		elif irq.id == ControlIrq.IRQ_HALT:
 			self.motionHaltRequest = True
-			for jogState in list(self.jogStates.values()):
+			for jogState in self.jogStates.values():
 				jogState.reset()
 			self.spindleCommand = 0
 		elif irq.id == ControlIrq.IRQ_LOGMSG:
@@ -825,13 +823,13 @@ class CNCControl(object):
 			if len(rawData) != size:
 				CNCCException.error("Only wrote %d bytes of %d bytes "
 					"bulk write" % (size, len(rawData)))
-		except (usb.USBError) as e:
+		except usb.USBError as e:
 			self.__usbError(e, origin="controlMsg")
 
 	def controlReply(self, timeoutMs=300):
 		try:
 			data = self.usbh.bulkRead(EP_IN, ControlReply.MAX_SIZE, timeoutMs)
-		except (usb.USBError) as e:
+		except usb.USBError as e:
 			self.__usbError(e, origin="controlReply")
 		return ControlReply.parseRaw(data)
 

@@ -2,9 +2,9 @@
 """
 #
 # CNC-control
-# EMC2 HAL module
+# LinuxCNC HAL module
 #
-# Copyright (C) 2011-2016 Michael Buesch <m@bues.ch>
+# Copyright (C) 2011-2023 Michael Büsch <m@bues.ch>
 #
 """
 
@@ -19,14 +19,14 @@ from hal import HAL_IN, HAL_OUT, HAL_RO, HAL_RW
 from cnccontrol_driver import *
 
 
-class Timekeeping(object):
+class Timekeeping:
 	def __init__(self):
 		self.update()
 
 	def update(self):
 		self.now = datetime.now()
 
-class BitPoke(object):
+class BitPoke:
 	IDLE	= 0
 	DUTY	= 1
 
@@ -39,7 +39,7 @@ class BitPoke(object):
 		h[pin] = 0
 
 	def __updateTimeout(self):
-		self.timeout = self.tk.now + timedelta(0, 0, self.cycleMsec * 1000)
+		self.timeout = self.tk.now + timedelta(milliseconds=self.cycleMsec)
 
 	def update(self):
 		# Returns DUTY or IDLE
@@ -59,7 +59,7 @@ class BitPoke(object):
 	def state(self):
 		return self.h[self.pin]
 
-class ValueBalance(object):
+class ValueBalance:
 	def __init__(self, h, tk,
 		     scalePin, incPin, decPin, feedbackPin):
 		self.h = h
@@ -113,18 +113,16 @@ class CNCControlHAL(CNCControl):
 		self.spindleStart = BitPoke(self.h, self.tk, "spindle.start")
 		self.spindleStop = BitPoke(self.h, self.tk, "spindle.stop")
 
-	def __checkEMC(self):
+	def __checkLinuxCNC(self):
 		for fn in ("/tmp/linuxcnc.lock",
-			   "/tmp/emc.filename",
-			   "/tmp/linuxcnc.print",
-			   "/tmp/emc.lock"):
+			   "/tmp/linuxcnc.print"):
 			try:
 				os.stat(fn)
 				return True
-			except (OSError) as e:
+			except OSError as e:
 				if e.errno in {errno.EPERM, errno.EACCES}:
 					return True
-		print("CNC-Control: EMC2 doesn't seem to be running")
+		print("CNC-Control: LinuxCNC doesn't seem to be running")
 		raise KeyboardInterrupt
 
 	def __createHalPins(self):
@@ -329,7 +327,7 @@ class CNCControlHAL(CNCControl):
 		lastRuntimePrint = -1
 		lastPing = -1
 		timeDebug = bool(self.h["config.debugperf"])
-		while self.__checkEMC():
+		while self.__checkLinuxCNC():
 			self.tk.update()
 			start = self.tk.now
 			try:
@@ -340,9 +338,9 @@ class CNCControlHAL(CNCControl):
 				self.tk.update()
 				# Update pins, even if we didn't receive an event.
 				self.__updatePins()
-			except (CNCCFatal) as e:
+			except CNCCFatal as e:
 				raise # Drop out of event loop and re-probe device.
-			except (CNCCException) as e:
+			except CNCCException as e:
 				print("CNC-Control error: " + str(e))
 			if not timeDebug:
 				continue
@@ -356,16 +354,16 @@ class CNCControlHAL(CNCControl):
 
 	def probeLoop(self):
 		self.__resetHalOutputPins()
-		while self.__checkEMC():
+		while self.__checkLinuxCNC():
 			try:
 				if self.probe():
 					self.__deviceInitialize()
 					self.__eventLoop()
 				else:
 					time.sleep(0.2)
-			except (CNCCFatal) as e:
+			except CNCCFatal as e:
 				print("CNC-Control fatal error: " + str(e))
-			except (CNCCException) as e:
+			except CNCCException as e:
 				print("CNC-Control error: " + str(e))
 			self.__resetHalOutputPins()
 
@@ -373,14 +371,14 @@ def main():
 	try:
 		try:
 			os.nice(-20)
-		except (OSError) as e:
+		except OSError as e:
 			print("WARNING: Failed to renice cnccontrol HAL module:", str(e))
 		cncc = CNCControlHAL()
 		cncc.probeLoop()
-	except (CNCCException) as e:
+	except CNCCException as e:
 		print("CNC-Control: Unhandled exception: " + str(e))
 		return 1
-	except (KeyboardInterrupt) as e:
+	except KeyboardInterrupt as e:
 		print("CNC-Control: shutdown")
 		return 0
 
