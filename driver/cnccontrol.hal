@@ -5,11 +5,10 @@
 
 loadusr -Wn cnccontrol linuxcnchal_cnccontrol
 
-
 # --- Device config ---
 setp	cnccontrol.config.twohand			1 # "two-hand" button enabled?
 setp	cnccontrol.config.debug				0 # Device debug (0=off, 1=on, 2=verbose)
-setp    cnccontrol.config.debugperf                     0 # Performance monitoring (0=off, 1=on)
+setp	cnccontrol.config.debugperf			0 # Performance monitoring (0=off, 1=on)
 setp	cnccontrol.config.usblogmsg			0 # Send device debug messages through USB
 
 # --- Machine state ---
@@ -31,12 +30,12 @@ setp	cnccontrol.axis.b.enable			0
 setp	cnccontrol.axis.c.enable			0
 
 # --- Axis position feedback ---
-net	cncc-xposma	halui.axis.0.pos-feedback	=> cnccontrol.axis.x.pos.machine-coords
-net	cncc-xposus	halui.axis.0.pos-relative	=> cnccontrol.axis.x.pos.user-coords
-net	cncc-yposma	halui.axis.1.pos-feedback	=> cnccontrol.axis.y.pos.machine-coords
-net	cncc-yposus	halui.axis.1.pos-relative	=> cnccontrol.axis.y.pos.user-coords
-net	cncc-zposma	halui.axis.2.pos-feedback	=> cnccontrol.axis.z.pos.machine-coords
-net	cncc-zposus	halui.axis.2.pos-relative	=> cnccontrol.axis.z.pos.user-coords
+net	cncc-xposma	halui.axis.x.pos-feedback	=> cnccontrol.axis.x.pos.machine-coords
+net	cncc-xposus	halui.axis.x.pos-relative	=> cnccontrol.axis.x.pos.user-coords
+net	cncc-yposma	halui.axis.y.pos-feedback	=> cnccontrol.axis.y.pos.machine-coords
+net	cncc-yposus	halui.axis.y.pos-relative	=> cnccontrol.axis.y.pos.user-coords
+net	cncc-zposma	halui.axis.z.pos-feedback	=> cnccontrol.axis.z.pos.machine-coords
+net	cncc-zposus	halui.axis.z.pos-relative	=> cnccontrol.axis.z.pos.user-coords
 # If more axes are enabled, connect pins here.
 
 # --- Jogging ---
@@ -47,31 +46,31 @@ setp	cnccontrol.jog.increment.2			0.1	# 3rd selectable increment
 setp	cnccontrol.jog.increment.3			0.0	# 4th selectable increment
 setp	cnccontrol.jog.increment.4			0.0	# 5th selectable increment
 setp	cnccontrol.jog.increment.5			0.0	# 6th selectable increment
-net	cncc-jogvel	cnccontrol.jog.velocity		=> halui.jog-speed
-net	cncc-jogxp	cnccontrol.jog.x.plus		=> halui.jog.0.plus
-net	cncc-jogxm	cnccontrol.jog.x.minus		=> halui.jog.0.minus
-net	cncc-jogxinc	cnccontrol.jog.x.inc		=> halui.jog.0.increment
-net	cncc-jogxincp	cnccontrol.jog.x.inc-plus	=> halui.jog.0.increment-plus
-net	cncc-jogxincm	cnccontrol.jog.x.inc-minus	=> halui.jog.0.increment-minus
-net	cncc-jogyp	cnccontrol.jog.y.plus		=> halui.jog.1.plus
-net	cncc-jogym	cnccontrol.jog.y.minus		=> halui.jog.1.minus
-net	cncc-jogyinc	cnccontrol.jog.y.inc		=> halui.jog.1.increment
-net	cncc-jogyincp	cnccontrol.jog.y.inc-plus	=> halui.jog.1.increment-plus
-net	cncc-jogyincm	cnccontrol.jog.y.inc-minus	=> halui.jog.1.increment-minus
-net	cncc-jogzp	cnccontrol.jog.z.plus		=> halui.jog.2.plus
-net	cncc-jogzm	cnccontrol.jog.z.minus		=> halui.jog.2.minus
-net	cncc-jogzinc	cnccontrol.jog.z.inc		=> halui.jog.2.increment
-net	cncc-jogzincp	cnccontrol.jog.z.inc-plus	=> halui.jog.2.increment-plus
-net	cncc-jogzincm	cnccontrol.jog.z.inc-minus	=> halui.jog.2.increment-minus
+net	cncc-jogvel	cnccontrol.jog.velocity		=> halui.axis.jog-speed
+net	cncc-jogxp	cnccontrol.jog.x.plus		=> halui.axis.x.plus
+net	cncc-jogxm	cnccontrol.jog.x.minus		=> halui.axis.x.minus
+net	cncc-jogxinc	cnccontrol.jog.x.inc		=> halui.axis.x.increment
+net	cncc-jogxincp	cnccontrol.jog.x.inc-plus	=> halui.axis.x.increment-plus
+net	cncc-jogxincm	cnccontrol.jog.x.inc-minus	=> halui.axis.x.increment-minus
+net	cncc-jogyp	cnccontrol.jog.y.plus		=> halui.axis.y.plus
+net	cncc-jogym	cnccontrol.jog.y.minus		=> halui.axis.y.minus
+net	cncc-jogyinc	cnccontrol.jog.y.inc		=> halui.axis.y.increment
+net	cncc-jogyincp	cnccontrol.jog.y.inc-plus	=> halui.axis.y.increment-plus
+net	cncc-jogyincm	cnccontrol.jog.y.inc-minus	=> halui.axis.y.increment-minus
+net	cncc-jogzp	cnccontrol.jog.z.plus		=> halui.axis.z.plus
+net	cncc-jogzm	cnccontrol.jog.z.minus		=> halui.axis.z.minus
+net	cncc-jogzinc	cnccontrol.jog.z.inc		=> halui.axis.z.increment
+net	cncc-jogzincp	cnccontrol.jog.z.inc-plus	=> halui.axis.z.increment-plus
+net	cncc-jogzincm	cnccontrol.jog.z.inc-minus	=> halui.axis.z.increment-minus
 # If more axes are enabled, connect pins here.
 
 # --- Master spindle control ---
-net	cncc-srunb	halui.spindle.runs-backward	=> cnccontrol.spindle.runs-bwd
-net	cncc-srunf	halui.spindle.runs-forward	=> cnccontrol.spindle.runs-fwd
-net	cncc-sfwd	cnccontrol.spindle.forward	=> halui.spindle.forward
-net	cncc-srev	cnccontrol.spindle.reverse	=> halui.spindle.reverse
-net	cncc-sstart	cnccontrol.spindle.start	=> halui.spindle.start
-net	cncc-sstop	cnccontrol.spindle.stop		=> halui.spindle.stop
+net	cncc-srunb	halui.spindle.0.runs-backward	=> cnccontrol.spindle.runs-bwd
+net	cncc-srunf	halui.spindle.0.runs-forward	=> cnccontrol.spindle.runs-fwd
+net	cncc-sfwd	cnccontrol.spindle.forward	=> halui.spindle.0.forward
+net	cncc-srev	cnccontrol.spindle.reverse	=> halui.spindle.0.reverse
+net	cncc-sstart	cnccontrol.spindle.start	=> halui.spindle.0.start
+net	cncc-sstop	cnccontrol.spindle.stop		=> halui.spindle.0.stop
 
 # --- Feed override ---
 net	cncc-foscale	cnccontrol.feed-override.scale	=> halui.feed-override.scale
